@@ -1,0 +1,11 @@
+# Kaggle: same protocol as loso.yaml, with paths that are writable on Kaggle.
+inherit:
+  - loso.yaml
+
+paths:
+  data_dir: /kaggle/working/data
+  reports_dir: /kaggle/working/reports
+
+experiment:
+  name: kaggle_loso
+  n_jobs: 4

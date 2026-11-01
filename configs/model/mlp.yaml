@@ -1,0 +1,17 @@
+model:
+  name: mlp
+  standardize: true
+  pca_components: null
+  hidden_sizes: [256, 64]
+  dropout: 0.5
+  weight_decay: 0.001
+  learning_rate: 0.001
+  batch_size: 64
+  max_epochs: 200
+  early_stopping_patience: 20
+  inner_val_fraction: 0.15    # early stopping on an inner split of the training data
+  device: cpu
+
+calibration:
+  method: temperature
+  n_bins: 10

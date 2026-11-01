@@ -1,0 +1,15 @@
+model:
+  name: logreg
+  standardize: true
+  pca_components: null      # null = no PCA; an int keeps that many components
+  penalty: l2               # l2 | elasticnet
+  # Hyperparameters chosen by nested, subject-level CV on the training split only.
+  grid:
+    C: [0.001, 0.01, 0.1, 1.0]
+    l1_ratio: [0.1, 0.5, 0.9]   # used only when penalty == elasticnet
+  inner_cv_folds: 5
+  max_iter: 5000
+
+calibration:
+  method: temperature       # temperature | platt | none ; fitted on the calibration split only
+  n_bins: 10                # for ECE and reliability diagrams

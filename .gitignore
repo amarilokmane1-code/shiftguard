@@ -1,0 +1,37 @@
+# --- Data: ABIDE has its own terms of use and is never committed or redistributed ---
+data/
+nilearn_data/
+*.nii
+*.nii.gz
+*.1D
+
+# --- Run folders may contain subject-level predictions derived from ABIDE ---
+reports/runs/
+reports/synthetic/
+reports/cache/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# --- Tooling ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.ipynb_checkpoints/
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

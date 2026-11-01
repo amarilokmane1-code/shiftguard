@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "ShiftGuard: Does conformal abstention survive site shift? A multi-site autism neuroimaging benchmark"
+type: software
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/amarilokmane1-code/shiftguard"
+authors:
+  - family-names: Amari
+    given-names: Lokmane
+    orcid: "https://orcid.org/0009-0006-2358-5912"
+keywords:
+  - conformal prediction
+  - distribution shift
+  - abstention
+  - autism spectrum disorder
+  - functional connectivity
+  - ABIDE

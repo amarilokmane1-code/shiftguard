@@ -1,0 +1,28 @@
+conformal:
+  alpha: 0.10                 # target coverage = 1 - alpha
+  scores: [lac, aps]
+  aps_randomized: false
+  methods:
+    - split                   # marginal split conformal
+    - class_conditional       # coverage per diagnosis group
+    - mondrian_site           # group-conditional by site (needs labelled target subjects)
+    - weighted                # weighted CP for covariate shift (Tibshirani et al., 2019)
+  n_target_labelled: [0, 5, 10, 20]   # few-labelled-target scenario
+  weighted:
+    domain_classifier: logreg
+    clip_quantiles: [0.01, 0.99]      # weight clipping, applied to estimated likelihood ratios
+    min_effective_sample_size: 20
+
+harmonization:
+  methods: [none, combat]
+  covariates: [AGE_AT_SCAN, SEX]      # diagnosis is NEVER a covariate
+  # An unseen site's batch parameters can only be estimated from that site's own data.
+  # transductive_unlabelled: location/scale parameters for the target site are estimated
+  # from its unlabelled features (no target labels). Flagged "transductive" in all outputs.
+  target_mode: transductive_unlabelled
+
+statistics:
+  n_bootstrap: 2000
+  ci_level: 0.95
+  fdr_method: benjamini_hochberg
+  bayes: empirical_bayes      # empirical_bayes | pymc

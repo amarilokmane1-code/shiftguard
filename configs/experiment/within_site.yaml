@@ -1,0 +1,17 @@
+# Exchangeable baseline: random subject-level split pooled across all sites, so every
+# site is represented in train, calibration and test ("no shift").
+inherit:
+  - ../data/abide_cc200.yaml
+  - ../model/logreg.yaml
+  - ../conformal/default.yaml
+
+experiment:
+  name: within_site
+  protocol: within_site
+  base_seed: 0
+  n_seeds: 10
+  test_fraction: 0.20
+  calibration_fraction: 0.30
+  stratify_by: [SITE_ID, DX_GROUP]
+  models: [logreg, mlp]
+  n_jobs: -1
