@@ -1,6 +1,7 @@
 # --- Data: ABIDE has its own terms of use and is never committed or redistributed ---
-data/
-nilearn_data/
+# Anchored with a leading "/" so that src/shiftguard/data/ and configs/data/ stay tracked.
+/data/
+/nilearn_data/
 *.nii
 *.nii.gz
 *.1D

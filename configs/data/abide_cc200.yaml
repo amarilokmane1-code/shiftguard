@@ -1,0 +1,30 @@
+# ABIDE I Preprocessed (Preprocessed Connectomes Project).
+# Data are downloaded to paths.data_dir and are never committed to git.
+paths:
+  data_dir: data
+  reports_dir: reports
+
+data:
+  source: abide_pcp
+  pipeline: cpac            # cpac | ccs | dparsf | niak
+  strategy: filt_noglobal   # filt_global | filt_noglobal | nofilt_global | nofilt_noglobal
+  derivative: rois_cc200    # rois_cc200 | rois_aal | rois_ho | rois_cc400 | ...
+  phenotypes: [SITE_ID, DX_GROUP, AGE_AT_SCAN, SEX, FIQ]
+
+qc:
+  # PCP provides three manual raters (qc_rater_1, qc_func_rater_2, qc_func_rater_3).
+  # "rater_1_pass": keep subjects that rater 1 did not mark "fail" (common in the literature).
+  # "all_raters_pass": keep subjects no rater marked "fail" (stricter).
+  # "none": no rater-based exclusion.
+  # "nilearn_quality_checked": nilearn's quality_checked=True filter (rater 1 OK, rater 2
+  # OK/maybe, rater 3 OK), common in the literature.
+  rater_rule: rater_1_pass
+  min_subjects_per_class_per_site: 10
+  min_timepoints: 50
+  max_zero_variance_rois: 0  # constant ROIs have undefined correlations -> exclude subject
+
+features:
+  kind: correlation         # correlation | partial correlation | tangent
+  fisher_z: true            # correlation kinds only
+  cov_estimator: ledoit_wolf
+  vectorize: upper_triangle_no_diagonal
