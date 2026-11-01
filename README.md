@@ -6,9 +6,9 @@
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> **Status: work in progress (phase 3 of 9: data).** ABIDE has been downloaded and QC'd,
-> but no experiment has been run yet, so every result below is `TBD`. Each number will be
-> filled in only from saved run outputs.
+> **Status: work in progress (phase 4 of 9: baselines).** The baseline classifiers have
+> been run on ABIDE. The conformal results are still `TBD`. Every number is taken from
+> saved run outputs.
 
 <!-- Main figure (coverage per deployment site) goes here once phase 5 has run:
 ![Coverage per deployment site](reports/figures/fig3_coverage_per_site.png) -->
@@ -46,7 +46,7 @@ proposal on *abstention that survives distribution shift* in autism research.
 | Scaffold, configs, CLI, CI | done (phase 1) |
 | Conformal core + synthetic tests | done (phase 2): see [synthetic validity checks](reports/tables/conformal_synthetic.md) |
 | ABIDE download, QC, connectomes | done (phase 3): 944 subjects, 18 sites, see [QC summary](reports/qc_summary.md) and [Figure 1](reports/figures/fig1_data_map.png) |
-| Baselines: within-site vs LOSO, calibration | TBD (phase 4) |
+| Baselines: within-site vs LOSO, calibration | done (phase 4): see [baselines](reports/tables/baselines.md), [per-site LOSO](reports/tables/loso_sites.md) and [Figure 6](reports/figures/fig6_reliability.png) |
 | Conformal under shift + statistics | TBD (phase 5) |
 | Label-free shift detection | TBD (phase 6) |
 | Report and documentation | TBD (phase 7) |
@@ -63,6 +63,30 @@ proposal on *abstention that survives distribution shift* in autism research.
 | LOSO | ComBat + split CP | TBD | TBD | TBD | TBD | TBD | TBD |
 | LOSO | Weighted CP | TBD | TBD | TBD | TBD | TBD | TBD |
 | LOSO | Mondrian (20 target labels) | TBD | TBD | TBD | TBD | TBD | TBD |
+
+### Baselines (phase 4)
+
+944 subjects, 18 sites, CC200 correlation connectomes (19,900 edges), 10 seeds, mean ± SD
+over seeds. Run `2026-11-01_223647_loso`; the full table is in
+[reports/tables/baselines.md](reports/tables/baselines.md).
+
+| Protocol | Model | AUC | Worst-site AUC | Balanced acc. | ECE (calibrated) | Null ECE at same n |
+|---|---|---|---|---|---|---|
+| Within-site | L2 logistic regression | 0.732 ± 0.030 | – | 0.668 ± 0.022 | 0.080 ± 0.017 | 0.074 |
+| Within-site | MLP | 0.692 ± 0.030 | – | 0.620 ± 0.031 | 0.078 ± 0.021 | 0.071 |
+| LOSO | L2 logistic regression | 0.731 ± 0.008 | 0.528 ± 0.043 | 0.672 ± 0.010 | 0.032 ± 0.006 | 0.034 |
+| LOSO | MLP | 0.690 ± 0.014 | 0.468 ± 0.061 | 0.628 ± 0.018 | 0.029 ± 0.008 | 0.033 |
+
+Pooled over sites, leaving a site out costs almost nothing: logistic-regression AUC is
+0.731 under LOSO vs 0.732 within-site. The shift shows up **per site**:
+- AUC ranges from 0.53 (OHSU) to 0.84 (USM).
+- At 4 of 18 deployment sites, the mean predicted ASD probability is off from the
+  observed ASD fraction by more than chance (KKI +0.22, LEUVEN_1 −0.21).
+
+These offsets are what phase 5 has to survive (see
+[LIMITATIONS §7](docs/LIMITATIONS.md)). The MLP has lower AUC and balanced accuracy and a
+higher Brier score than logistic regression. After temperature scaling, both are
+calibrated to within their null ECE.
 
 ## Limitations
 

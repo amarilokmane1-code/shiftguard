@@ -27,10 +27,77 @@ them. A test checks that test-subject features are unchanged by the composition 
 test set, and that fitting the reference on train + test would change them.
 
 ## 2. Evaluation protocols (leave-one-site-out and within-site)
-TBD (phase 4).
+
+Implementation: `src/shiftguard/evaluation/protocols.py`. Seeds 0–9; every random
+choice is derived from `(base_seed, protocol, seed, site)`.
+
+- **Leave-one-site-out (LOSO, site shift).** For each of the 18 sites and each seed, every
+  subject of that site is the test (deployment) set. The remaining sites are split by
+  subject into train (70%) and calibration (30%), stratified by site × diagnosis. The
+  deployment site is never used for training, calibration, hyperparameter tuning or
+  feature fitting. 180 splits.
+- **Within-site (exchangeable reference, no shift).** For each seed, a random subject-level
+  split of the pooled cohort into test (20%), train and calibration (70/30 of the rest),
+  stratified by site × diagnosis, so every site appears in every split. 10 splits.
+- **Leakage guard.** Before any model is fitted, each split must pass `check_split`: the
+  three parts are disjoint, no subject ID appears in two parts, and (LOSO) the test site
+  is absent from train and calibration and the test set contains only that site. Unit
+  tests also check that the LOSO test sets partition the cohort for every seed.
+- **Fitted on training rows only:** feature standardisation, the PCA rotation,
+  hyperparameter selection, MLP early stopping, and (tangent kind) the tangent
+  reference. Calibrators are fitted on the calibration rows only.
 
 ## 3. Models and probability calibration
-TBD (phase 4).
+
+**L2 logistic regression** (`models/logreg.py`). Features are z-scored, then C is chosen
+from $\{10^{-6}, \dots, 10^{0}\}$ by 5-fold stratified CV on the training rows,
+minimising the mean inner-fold log loss, and the model is refit on all training rows.
+With $n \approx 650 \ll p = 19{,}900$, the L2 solution lies in the row space of the
+centred training matrix and the penalty is rotation invariant. So the model is fitted on
+the full-rank PCA scores of the training rows (no truncation, no whitening), which gives
+identical predictions to fitting on all edges, much faster (a unit test checks this).
+The shortcut is used **only for pure L2**. The elastic net's L1 term is not rotation
+invariant, so the elastic net is always fitted on the original standardised features, and
+combining it with any PCA basis raises an error (tested). Every scaler and PCA basis is
+fitted on training rows only: on each inner-training fold during the C search, then on
+the fold's training split. Tests check the exact row counts of every fit and that the
+runner passes the model nothing but the fold's training rows.
+
+**MLP** (`models/mlp.py`, PyTorch). 19,900 → 256 → 64 → 1, ReLU, dropout 0.5, Adam
+(learning rate $10^{-3}$, weight decay $10^{-3}$), batch size 64. Early stopping (patience
+20, at most 200 epochs) uses an inner stratified 15% validation split of the training rows,
+and the best weights are restored. The architecture is fixed in the config, not tuned:
+only the stopping epoch is data-driven.
+
+**Calibration** (`models/calibration.py`). Temperature scaling,
+$\hat p = \sigma(z/T)$, with $T$ minimising the calibration-split NLL; Platt scaling is
+available as an option. Temperature scaling is monotone in the logit, so AUC is unchanged.
+For binary LAC, the true-label score is a monotone function of the signed margin
+$\pm z$ for every $T$, so **conformal sets are also unchanged** and reusing the
+calibration split for conformal prediction (phase 5) is harmless. That is not true for
+Platt scaling or for APS. **Proposed for phase 5 (to be confirmed):** for randomised APS,
+fit the temperature and the conformal quantile on disjoint halves of the calibration
+split.
+
+**Metrics.** AUC; balanced accuracy at threshold 0.5; ECE of $P(\text{ASD})$ with 10
+equal-width bins, $\sum_m \tfrac{|B_m|}{n}|\bar y_{B_m} - \bar p_{B_m}|$; Brier score.
+LOSO reports pooled-test metrics (all deployment sites' predictions for one seed
+together), plus the mean and the minimum of the per-site AUC. All are summarised as
+mean ± SD over the 10 seeds.
+
+Binned ECE is biased upward in small samples, so ECE values from test sets of different
+sizes are not comparable (189 subjects per within-site test set, 944 pooled LOSO
+predictions, 25–172 per LOSO site). Every ECE is therefore reported next to a
+**size-matched null ECE**: the mean ECE over 200 label draws $y_i \sim
+\text{Bernoulli}(\hat p_i)$ using the same probabilities, i.e. what a perfectly calibrated
+model would show at that size (`null_ece`). An ECE is read as miscalibration only when it
+clearly exceeds its null. **Calibration-in-the-large** per site is
+$\bar{\hat p} - \bar y$ (mean predicted P(ASD) minus the observed ASD fraction). Under
+perfect calibration its SD is $\sqrt{\sum_i \hat p_i(1-\hat p_i)}/n$, which gives the
+grey 95% band in Figure 6. Pooled LOSO calibration can look perfect while site offsets
+of opposite sign cancel, so the per-site view is the one that matters for phase 5.
+`shiftguard summarize <run_dir>` rebuilds every table and Figure 6 from a run's saved
+predictions without refitting.
 
 ## 4. Conformal prediction
 

@@ -1,16 +1,20 @@
-# Main protocol: leave-one-site-out. The deployment site is never used for training,
-# calibration or hyperparameter tuning (except in the explicit few-labelled-target arm).
+# Main experiment: leave-one-site-out, plus the within-site (exchangeable) reference.
+# The deployment site is never used for training, calibration or hyperparameter tuning
+# (except in the explicit few-labelled-target arm of phase 5).
 inherit:
   - ../data/abide_cc200.yaml
   - ../model/logreg.yaml
+  - ../model/mlp.yaml
+  - ../model/calibration.yaml
   - ../conformal/default.yaml
 
 experiment:
   name: loso
-  protocol: loso
+  protocols: [within_site, loso]
   base_seed: 0
   n_seeds: 10
   calibration_fraction: 0.30   # train/calibration split inside the training sites
+  test_fraction: 0.20          # within-site protocol only
   stratify_by: [SITE_ID, DX_GROUP]
   models: [logreg, mlp]
   n_jobs: -1

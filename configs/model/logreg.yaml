@@ -1,15 +1,15 @@
-model:
-  name: logreg
-  standardize: true
-  pca_components: null      # null = no PCA; an int keeps that many components
-  penalty: l2               # l2 | elasticnet
-  # Hyperparameters chosen by nested, subject-level CV on the training split only.
-  grid:
-    C: [0.001, 0.01, 0.1, 1.0]
-    l1_ratio: [0.1, 0.5, 0.9]   # used only when penalty == elasticnet
-  inner_cv_folds: 5
-  max_iter: 5000
-
-calibration:
-  method: temperature       # temperature | platt | none ; fitted on the calibration split only
-  n_bins: 10                # for ECE and reliability diagrams
+models:
+  logreg:
+    standardize: true
+    penalty: l2               # l2 | elasticnet
+    # For L2, the model is fitted on a full-rank PCA rotation of the (standardised)
+    # training data: by the representer theorem this gives identical predictions to
+    # fitting on all 19,900 features, much faster. Set an int to truncate instead.
+    pca_components: null
+    # Hyperparameters chosen by nested, stratified CV on the training split only,
+    # minimising the mean inner-fold log loss.
+    grid:
+      C: [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0]
+      l1_ratio: [0.1, 0.5, 0.9]   # used only when penalty == elasticnet
+    inner_cv_folds: 5
+    max_iter: 5000

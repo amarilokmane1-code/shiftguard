@@ -82,10 +82,10 @@ def test_save_roundtrip(tmp_path):
 @pytest.mark.parametrize("name", ["loso.yaml", "within_site.yaml", "kaggle.yaml", "synthetic.yaml"])
 def test_shipped_experiment_configs_resolve(name):
     cfg = load_config(CONFIG_DIR / "experiment" / name)
-    for section in ("experiment", "model", "conformal", "paths"):
+    for section in ("experiment", "models", "calibration", "conformal", "paths"):
         assert section in cfg, f"{name} lacks section {section!r}"
     assert 0 < cfg["conformal"]["alpha"] < 1
-    assert cfg["experiment"]["protocol"] in {"loso", "within_site"}
+    assert set(cfg["experiment"]["protocols"]) <= {"loso", "within_site"}
     # Diagnosis must never be a harmonisation covariate (it would leak the label).
     assert "DX_GROUP" not in cfg["harmonization"]["covariates"]
 
@@ -93,6 +93,6 @@ def test_shipped_experiment_configs_resolve(name):
 def test_kaggle_config_inherits_loso():
     loso = load_config(CONFIG_DIR / "experiment" / "loso.yaml")
     kaggle = load_config(CONFIG_DIR / "experiment" / "kaggle.yaml")
-    assert kaggle["experiment"]["protocol"] == loso["experiment"]["protocol"]
+    assert kaggle["experiment"]["protocols"] == loso["experiment"]["protocols"]
     assert kaggle["data"] == loso["data"]
     assert kaggle["paths"]["data_dir"].startswith("/kaggle/")

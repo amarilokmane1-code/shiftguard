@@ -73,14 +73,22 @@ because those subjects have no file. Per-site counts, before and after QC, are i
 [`reports/qc_summary.md`](../reports/qc_summary.md) (and `.csv`). Subject-level exclusions
 are in `data/derived/<tag>/exclusions.csv`, which is git-ignored.
 
-**Zero-variance ROIs.** A constant ROI (outside the subject's field of view) has an
-undefined correlation; Ledoit-Wolf shrinkage would silently turn it into exact zeros. By
-default these subjects are excluded (`max_zero_variance_rois: 0`). Most of the 26 have only
-1 or 2 constant ROIs; one CALTECH scan has 118. This rule costs the CMU site: 9 of its 27
-subjects fall under it, and CMU then fails the minimum-size rule. With
-`max_zero_variance_rois: 10`, 978 subjects from 19 sites would be kept, CMU included. That
-option is kept for a sensitivity analysis. CALTECH is lost under any threshold (15 rater-1
-failures).
+**Zero-variance ROIs (decision, 2026-11-01).** A constant ROI (outside the subject's field
+of view) has an undefined correlation, and Ledoit-Wolf shrinkage would silently turn it
+into exact zeros. **Constant ROIs are never filled with zeros.** Such zeros would cluster
+at the sites with limited coverage and create an artificial site signal, which would bias
+a study whose subject is the site effect.
+
+Two leakage-free options remain: exclude the affected *subjects*, or exclude the affected
+*ROIs* for every subject (the same feature set everywhere). The pre-specified decision rule
+was to use ROI-level exclusion if the 26 affected subjects together have 5 or fewer
+distinct constant ROIs, and the strict subject rule otherwise. They have **121** distinct
+constant ROIs (28 if the one broken CALTECH scan with 118 is set aside, and 13 for the CMU
+subjects alone). So the **main analysis uses the strict subject rule**
+(`max_zero_variance_rois: 0`): 944 subjects, 18 sites, all 200 CC200 ROIs. This costs the
+CMU site: 9 of its 27 subjects are excluded, and CMU then fails the minimum-size rule.
+ROI-level exclusion (which would keep CMU) is planned as a **sensitivity analysis in
+phase 5**. CALTECH is lost under either option (15 rater-1 failures).
 
 Alternative rater rules (`all_raters_pass`, `nilearn_quality_checked` = nilearn's
 `quality_checked=True`, `none`) are one config line away.

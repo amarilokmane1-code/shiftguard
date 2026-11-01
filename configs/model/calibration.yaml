@@ -1,0 +1,6 @@
+calibration:
+  # Fitted on the calibration split only. For binary LAC, temperature scaling is a
+  # monotone transform of the margin and leaves conformal sets unchanged, so reusing the
+  # calibration split for conformal prediction is harmless there (see METHODS 3).
+  method: temperature       # temperature | platt | none
+  n_bins: 10                # equal-width bins for ECE and reliability diagrams

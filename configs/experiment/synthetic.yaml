@@ -1,6 +1,8 @@
 # Fast end-to-end smoke run on simulated multi-site data (no download). Used by CI.
 inherit:
   - ../model/logreg.yaml
+  - ../model/mlp.yaml
+  - ../model/calibration.yaml
   - ../conformal/default.yaml
 
 paths:
@@ -15,17 +17,26 @@ data:
   site_shift_scale: 1.0
   signal_strength: 0.8
 
-model:
-  grid:
-    C: [0.01, 0.1, 1.0]
-  inner_cv_folds: 3
+features:
+  kind: correlation
+
+models:
+  logreg:
+    grid:
+      C: [0.01, 0.1, 1.0]
+    inner_cv_folds: 3
+  mlp:
+    hidden_sizes: [16]
+    max_epochs: 30
+    early_stopping_patience: 5
 
 experiment:
   name: synthetic
-  protocol: loso
+  protocols: [within_site, loso]
   base_seed: 0
   n_seeds: 2
   calibration_fraction: 0.30
+  test_fraction: 0.20
   stratify_by: [SITE_ID, DX_GROUP]
   models: [logreg]
   n_jobs: 1

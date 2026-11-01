@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Phase 4: baselines. Nested-CV L2 logistic regression (exact full-rank PCA rotation
+  speed-up, tested); PyTorch MLP with early stopping; temperature / Platt calibration;
+  ECE and reliability tables. LOSO and within-site protocols with a leakage guard on
+  every split. Synthetic multi-site cohort for CI. `shiftguard run` (per-subject
+  predictions in the run folder, `reports/tables/baselines.*`, `reports/tables/loso_sites.*`,
+  Figure 6 reliability diagrams). Configs restructured (`models:` section, `calibration.yaml`).
+- Phase 4 calibration diagnostics: size-matched null ECE (`null_ece`), per-site
+  calibration-in-the-large, and a per-site LOSO panel in Figure 6. New command
+  `shiftguard summarize <run_dir>` rebuilds tables and figures from saved predictions.
+- Phase 4 checks: the elastic net is never fitted in the PCA-rotated basis (an error if
+  combined with `pca_components`), and every scaler/PCA basis is fitted on training rows
+  only (tests count the rows of every fit).
+- Phase 4 results (run `2026-11-01_223647_loso`, 944 subjects, 18 sites, 10 seeds): LOSO
+  AUC 0.731 ± 0.008 (logistic regression) and 0.690 ± 0.014 (MLP); within-site 0.732 ±
+  0.030 and 0.692 ± 0.030. Calibration offsets beyond chance at 4/18 (logistic
+  regression) and 2/18 (MLP) deployment sites.
+- Zero-variance ROI decision: 121 distinct constant ROIs among the 26 affected subjects
+  (> 5), so the strict subject rule stays the main analysis; ROI-level exclusion is
+  planned as a phase 5 sensitivity analysis. Constant ROIs are never zero-filled.
+
 - Phase 3: ABIDE data pipeline. Downloader (`nilearn.fetch_abide_pcp`, plus a parallel
   HTTPS fallback with retries to the same layout; refuses to run when `SHIFTGUARD_OFFLINE`
   is set). Phenotype cleaning (label 1 = ASD). Audited QC with seven ordered exclusion
@@ -34,3 +54,7 @@ All notable changes to this project are documented here. The format follows
   YAML configs with inheritance and `--set` overrides, Typer CLI skeleton, timestamped
   logging, seeding, run provenance (config, seeds, git commit, package versions),
   ruff + pytest + pre-commit, GitHub Actions CI (never downloads ABIDE), docs skeleton.
+
+### Fixed
+- `.gitignore` now anchors `/data/` (previously also ignored `src/shiftguard/data/` and
+  `configs/data/`).

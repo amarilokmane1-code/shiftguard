@@ -3,6 +3,7 @@
 ``shiftguard download``  fetch ABIDE I (PCP) time series and phenotypes
 ``shiftguard features``  QC + functional-connectivity features
 ``shiftguard run``       run an experiment from a YAML config
+``shiftguard summarize`` rebuild a run's tables from its saved predictions
 ``shiftguard report``    regenerate tables, figures and docs/RESULTS.md
 ``shiftguard all``       the whole pipeline
 """
@@ -122,9 +123,65 @@ def features(config: ConfigOption = DEFAULT_EXPERIMENT, overrides: OverrideOptio
 
 
 @app.command()
-def run(config: ConfigOption = DEFAULT_EXPERIMENT, overrides: OverrideOption = None) -> None:
-    """Run an experiment (LOSO or within-site) described by a YAML config."""
-    _not_ready("run", 4)
+def run(
+    config: ConfigOption = DEFAULT_EXPERIMENT,
+    overrides: OverrideOption = None,
+    n_jobs: Annotated[int | None, typer.Option(help="Parallel fold fits (-1 = all).")] = None,
+) -> None:
+    """Run an experiment (LOSO and/or within-site) described by a YAML config."""
+    from shiftguard.config import load_config
+    from shiftguard.data.synthetic import load_any_dataset
+    from shiftguard.evaluation.runner import run_experiment, write_baseline_outputs
+    from shiftguard.utils.paths import reports_dir
+    from shiftguard.utils.provenance import create_run_dir, write_run_metadata
+
+    cfg = load_config(config, overrides)
+    exp = cfg["experiment"]
+    try:
+        ds = load_any_dataset(cfg)
+    except FileNotFoundError as exc:
+        log.error("%s", exc)
+        raise typer.Exit(code=3) from exc
+    reports = reports_dir(cfg)
+    run_dir = create_run_dir(reports, exp["name"])
+    setup_logging("INFO", log_file=run_dir / "run.log")
+    write_run_metadata(
+        run_dir,
+        cfg,
+        seeds=list(range(exp["n_seeds"])),
+        extra={"command": "run", "n_subjects": len(ds.labels), "n_sites": len(set(ds.sites))},
+    )
+    log.info("Run folder: %s (%d subjects, %d sites)", run_dir, len(ds.labels), len(set(ds.sites)))
+    preds, info = run_experiment(ds, cfg, n_jobs=n_jobs)
+    table = write_baseline_outputs(preds, info, cfg, run_dir, reports)
+    typer.echo(
+        table[
+            ["protocol", "model", "auc", "auc_site_mean", "balanced_accuracy", "ece_raw", "ece_cal"]
+        ].to_string(index=False)
+    )
+    typer.echo(f"Run folder: {run_dir}")
+
+
+@app.command()
+def summarize(
+    run_dir: Annotated[Path, typer.Argument(help="Existing run folder (reports/runs/...).")],
+) -> None:
+    """Rebuild the tables and Figure 6 of an existing run from its saved predictions."""
+    import pandas as pd
+
+    from shiftguard.config import load_config
+    from shiftguard.evaluation.runner import write_baseline_outputs
+    from shiftguard.utils.paths import reports_dir
+
+    needed = [run_dir / n for n in ("config.yaml", "predictions.csv.gz", "fold_info.csv")]
+    missing = [p.name for p in needed if not p.is_file()]
+    if missing:
+        log.error("%s is not a complete run folder (missing %s)", run_dir, ", ".join(missing))
+        raise typer.Exit(code=3)
+    cfg = load_config(needed[0])
+    preds, info = pd.read_csv(needed[1]), pd.read_csv(needed[2])
+    table = write_baseline_outputs(preds, info, cfg, run_dir, reports_dir(cfg), save_raw=False)
+    typer.echo(table[["protocol", "model", "auc", "ece_cal", "ece_null"]].to_string(index=False))
 
 
 @app.command()

@@ -41,7 +41,7 @@ def test_data_stages_fail_cleanly_without_data_or_network(stage, tmp_path):
     assert result.exit_code == 3, result.output
 
 
-@pytest.mark.parametrize("stage", ["run", "report", "all"])
+@pytest.mark.parametrize("stage", ["report", "all"])
 def test_unimplemented_stages_fail_loudly(stage):
     result = runner.invoke(app, [stage])
     assert result.exit_code == 2

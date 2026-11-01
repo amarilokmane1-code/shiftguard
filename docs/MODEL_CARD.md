@@ -19,7 +19,9 @@ conformal prediction with abstention.
 
 ## Performance
 
-TBD (phases 4–5). Reported with uncertainty, per site and overall.
+Discrimination and calibration (phase 4): [baselines](../reports/tables/baselines.md)
+and [per-site LOSO results](../reports/tables/loso_sites.md), mean ± SD over 10 seeds.
+Coverage and abstention: TBD (phase 5).
 
 ## Subgroups and known biases
 
