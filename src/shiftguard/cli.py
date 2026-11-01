@@ -67,15 +67,58 @@ def info() -> None:
 
 
 @app.command()
-def download(config: ConfigOption = DEFAULT_EXPERIMENT, overrides: OverrideOption = None) -> None:
+def download(
+    config: ConfigOption = DEFAULT_EXPERIMENT,
+    overrides: OverrideOption = None,
+    method: Annotated[str, typer.Option(help="auto | nilearn | s3")] = "auto",
+    n_jobs: Annotated[int, typer.Option(help="Parallel HTTPS connections (s3).")] = 8,
+) -> None:
     """Download ABIDE I preprocessed ROI time series and phenotypes."""
-    _not_ready("download", 3)
+    from shiftguard.config import load_config
+    from shiftguard.data.download import AbideSpec, OfflineError, download_abide
+    from shiftguard.utils.paths import data_dir
+
+    cfg = load_config(config, overrides)
+    if method not in ("auto", "nilearn", "s3"):
+        raise typer.BadParameter("method must be auto, nilearn or s3")
+    try:
+        rep = download_abide(
+            data_dir(cfg),
+            AbideSpec.from_config(cfg["data"]),
+            method=method,  # type: ignore[arg-type]
+            n_jobs=n_jobs,
+        )
+    except OfflineError as exc:
+        log.error("%s", exc)
+        raise typer.Exit(code=3) from exc
+    typer.echo(
+        f"{rep.n_present}/{rep.n_expected} time series on disk, "
+        f"{rep.bytes_on_disk / 1e6:.1f} MB, method: {rep.method_used}"
+    )
+    if rep.missing:
+        log.warning("Missing after download (%d): %s", len(rep.missing), ", ".join(rep.missing))
 
 
 @app.command()
 def features(config: ConfigOption = DEFAULT_EXPERIMENT, overrides: OverrideOption = None) -> None:
     """Apply QC and compute functional-connectivity features."""
-    _not_ready("features", 3)
+    from shiftguard.config import load_config
+    from shiftguard.data.dataset import build_dataset
+
+    cfg = load_config(config, overrides)
+    try:
+        qc = build_dataset(cfg)
+    except FileNotFoundError as exc:
+        log.error("%s", exc)
+        raise typer.Exit(code=3) from exc
+    totals = qc.summary.set_index("SITE_ID").loc["TOTAL"]
+    typer.echo(
+        f"Kept {totals['n_after']}/{totals['n_before']} subjects "
+        f"(ASD {totals['n_after_ASD']}, TDC {totals['n_after_TDC']}) "
+        f"from {qc.included['SITE_ID'].nunique()} sites."
+    )
+    for reason, count in qc.reason_counts.items():
+        typer.echo(f"  excluded, {reason:<22} {count}")
 
 
 @app.command()

@@ -7,6 +7,17 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Phase 3: ABIDE data pipeline. Downloader (`nilearn.fetch_abide_pcp`, plus a parallel
+  HTTPS fallback with retries to the same layout; refuses to run when `SHIFTGUARD_OFFLINE`
+  is set). Phenotype cleaning (label 1 = ASD). Audited QC with seven ordered exclusion
+  reasons and four rater rules. Connectivity features (correlation, partial correlation,
+  tangent), where the tangent reference can only be fitted inside a fold.
+  `shiftguard download` and `shiftguard features`. `reports/qc_summary.{csv,md}`,
+  `reports/tables/cohort_summary.{csv,md}`, Figure 1 (`reports/figures/fig1_data_map`).
+  Shared figure style (colour-blind-safe categorical order, PNG 300 dpi + PDF).
+- Phase 3 decisions recorded: LAC primary / randomised APS secondary; the Mondrian
+  5-label arm is kept (needs >= 9 labelled target subjects at alpha = 0.1); domain
+  classifier = PCA (train + unlabelled target, transductive) + L2 logistic regression.
 - Phase 2 — conformal core written from scratch (`shiftguard.conformal`): LAC and APS
   scores (deterministic and randomised), split conformal, class-conditional, Mondrian
   (group-conditional) and weighted conformal prediction with weight clipping and Kish

@@ -34,7 +34,14 @@ def test_simulate_writes_tables_and_provenance(tmp_path):
     }
 
 
-@pytest.mark.parametrize("stage", ["download", "features", "run", "report", "all"])
+@pytest.mark.parametrize("stage", ["download", "features"])
+def test_data_stages_fail_cleanly_without_data_or_network(stage, tmp_path):
+    # empty data dir + SHIFTGUARD_OFFLINE=1: no download attempt, clear exit code 3
+    result = runner.invoke(app, [stage, "-s", f"paths.data_dir={tmp_path.as_posix()}"])
+    assert result.exit_code == 3, result.output
+
+
+@pytest.mark.parametrize("stage", ["run", "report", "all"])
 def test_unimplemented_stages_fail_loudly(stage):
     result = runner.invoke(app, [stage])
     assert result.exit_code == 2

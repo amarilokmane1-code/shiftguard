@@ -1,10 +1,30 @@
 # Methods
 
-*Sections 4 and 7 (conformal core, coverage inference) are written; the others are
-completed as each phase is implemented.*
+*Sections 1, 4 and 7 are written; the others are completed as each phase is implemented.*
 
 ## 1. Data and features
-TBD (phase 3).
+
+**Data.** ABIDE I Preprocessed (PCP): C-PAC pipeline, band-pass filtered, no global
+signal regression, CC200 atlas (200 ROIs). The PCP phenotypic file supplies site,
+diagnosis, age, sex, FIQ and manual QC ratings. Download, QC rules and the resulting
+cohort (944 subjects, 18 sites) are described in [DATA_CARD.md](DATA_CARD.md).
+
+**Connectivity.** For each subject with ROI time series $T \in \mathbb{R}^{t \times R}$
+($R = 200$), the covariance is estimated with Ledoit-Wolf shrinkage and converted to a
+correlation matrix $C$ (`nilearn.connectome.ConnectivityMeasure`). The strict upper
+triangle gives $R(R-1)/2 = 19{,}900$ features, Fisher z-transformed:
+$z_{jk} = \operatorname{arctanh}(C_{jk})$, with $|C_{jk}|$ clipped at $1 - 10^{-7}$.
+Correlation and partial correlation are **subject-wise**: a subject's features depend
+only on its own time series, so they are computed once and cached.
+
+**Tangent space (optional).** Each covariance $\Sigma_i$ is mapped to
+$\log\big(\bar\Sigma^{-1/2}\Sigma_i\bar\Sigma^{-1/2}\big)$, where $\bar\Sigma$ is the
+geometric mean of the covariances of the **training subjects only**. This reference
+depends on who is in the training set, so tangent features are never precomputed:
+`subjectwise_features(kind="tangent")` raises an error, and `fit_transform_fold()` fits the
+reference on the training indices and checks that every evaluation split is disjoint from
+them. A test checks that test-subject features are unchanged by the composition of the
+test set, and that fitting the reference on train + test would change them.
 
 ## 2. Evaluation protocols (leave-one-site-out and within-site)
 TBD (phase 4).
@@ -55,6 +75,10 @@ $\hat q_g$ = conformal quantile of $\{S_i : G_i = g\}$, and $C(x, g) = \{y : s(x
 calibration data only in the *few labelled target subjects* scenario (0, 5, 10 or 20
 labelled subjects moved to calibration). Groups without calibration data, or with fewer
 than $(1-\alpha)/\alpha$ points, get full sets.
+
+> **At $\alpha = 0.1$, per-site conformal needs at least 9 labelled target subjects.** The
+> 5-label arm is kept on purpose as an honest demonstration: by construction, it
+> abstains on every subject of the deployment site.
 
 ### 4.5 Weighted conformal prediction (covariate shift)
 
@@ -115,7 +139,8 @@ trials is exactly Binomial(trials, coverage) and exact inference applies.
 A side finding the tests document: **in binary problems, deterministic APS degenerates.**
 The non-top label always has score 1, so whenever the model's top-class error rate
 exceeds $\alpha$, $\hat q = 1$ and every set is full. Randomised APS and LAC do not
-have this problem.
+have this problem. **Score choice for ABIDE:** LAC is the primary score and randomised
+APS the secondary one. Deterministic APS is reported once, as this documented failure case.
 
 ## 5. Harmonisation
 TBD (phase 5).

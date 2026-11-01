@@ -1,16 +1,27 @@
 conformal:
   alpha: 0.10                 # target coverage = 1 - alpha
-  scores: [lac, aps]
-  aps_randomized: false
+  primary_score: lac          # main score for ABIDE
+  scores: [lac, aps]          # aps is secondary
+  aps_randomized: true        # deterministic APS degenerates for binary tasks (METHODS 4.7);
+  report_deterministic_aps_once: true   # ... it is reported once, as a documented failure case
   methods:
     - split                   # marginal split conformal
     - class_conditional       # coverage per diagnosis group
     - mondrian_site           # group-conditional by site (needs labelled target subjects)
     - weighted                # weighted CP for covariate shift (Tibshirani et al., 2019)
-  n_target_labelled: [0, 5, 10, 20]   # few-labelled-target scenario
+  # Few-labelled-target scenario. At alpha = 0.1 per-site conformal needs >= 9 labelled
+  # target subjects; the 5-label arm is kept on purpose (it must abstain on everyone).
+  n_target_labelled: [0, 5, 10, 20]
   weighted:
-    domain_classifier: logreg
-    clip_quantiles: [0.01, 0.99]      # weight clipping, applied to estimated likelihood ratios
+    domain_classifier:
+      # PCA is fitted on training features + UNLABELLED target features (transductive,
+      # no labels used); n_components and C chosen by CV; then L2 logistic regression.
+      pca_fit_on: train_plus_target_unlabelled
+      pca_components_grid: [10, 20, 50, 100]
+      C_grid: [0.01, 0.1, 1.0]
+      cv_folds: 5
+      report_auc: true                # domain-classifier AUC reported for every site
+    clip_quantiles: [0.01, 0.99]      # separate method: voids the exact guarantee
     min_effective_sample_size: 20
 
 harmonization:
