@@ -6,8 +6,9 @@
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> **Status: work in progress (phase 1 of 9: scaffold).** No experiment has been run yet,
-> so every result below is `TBD`. Each number will be filled in only from saved run outputs.
+> **Status: work in progress (phase 2 of 9: conformal core).** No ABIDE experiment has
+> been run yet, so every ABIDE result below is `TBD`. Each number will be filled in only
+> from saved run outputs.
 
 <!-- Main figure (coverage per deployment site) goes here once phase 5 has run:
 ![Coverage per deployment site](reports/figures/fig3_coverage_per_site.png) -->
@@ -43,7 +44,7 @@ proposal on *abstention that survives distribution shift* in autism research.
 | Component | Status |
 |---|---|
 | Scaffold, configs, CLI, CI | done (phase 1) |
-| Conformal core + synthetic tests | TBD (phase 2) |
+| Conformal core + synthetic tests | done (phase 2): see [synthetic validity checks](reports/tables/conformal_synthetic.md) |
 | ABIDE download, QC, connectomes | TBD (phase 3) |
 | Baselines: within-site vs LOSO, calibration | TBD (phase 4) |
 | Conformal under shift + statistics | TBD (phase 5) |

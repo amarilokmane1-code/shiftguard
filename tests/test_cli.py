@@ -20,6 +20,20 @@ def test_info_reports_version():
     assert __version__ in result.output
 
 
+def test_simulate_writes_tables_and_provenance(tmp_path):
+    result = runner.invoke(
+        app, ["simulate", "--n-trials", "40", "--seed", "3", "--reports-dir", str(tmp_path)]
+    )
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "tables" / "conformal_synthetic.csv").is_file()
+    md = (tmp_path / "tables" / "conformal_synthetic.md").read_text(encoding="utf-8")
+    assert "weighted (oracle w)" in md
+    (run_dir,) = (tmp_path / "runs").iterdir()
+    assert {"config.yaml", "metadata.json", "conformal_synthetic.csv"} <= {
+        p.name for p in run_dir.iterdir()
+    }
+
+
 @pytest.mark.parametrize("stage", ["download", "features", "run", "report", "all"])
 def test_unimplemented_stages_fail_loudly(stage):
     result = runner.invoke(app, [stage])

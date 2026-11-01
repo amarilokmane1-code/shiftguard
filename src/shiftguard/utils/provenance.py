@@ -125,5 +125,5 @@ def write_run_metadata(
         **(dict(extra) if extra else {}),
     }
     out = run_path / "metadata.json"
-    out.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    out.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8", newline="\n")
     return out

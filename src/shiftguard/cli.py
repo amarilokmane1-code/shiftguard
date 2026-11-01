@@ -90,6 +90,51 @@ def report(config: ConfigOption = DEFAULT_EXPERIMENT, overrides: OverrideOption 
     _not_ready("report", 7)
 
 
+@app.command()
+def simulate(
+    n_trials: Annotated[int, typer.Option(help="Trials per experiment.")] = 4000,
+    alpha: Annotated[float, typer.Option(help="Miscoverage level.")] = 0.1,
+    seed: Annotated[int, typer.Option(help="Random seed.")] = 0,
+    reports: Annotated[Path, typer.Option("--reports-dir", help="Output root.")] = Path("reports"),
+) -> None:
+    """Synthetic validity checks of the conformal core (no data needed)."""
+    from shiftguard.evaluation.simulation import run_all_simulations
+    from shiftguard.utils.provenance import create_run_dir, write_run_metadata
+    from shiftguard.utils.tables import write_table
+
+    log.info("Running synthetic conformal experiments (n_trials=%d, seed=%d)", n_trials, seed)
+    df = run_all_simulations(n_trials=n_trials, alpha=alpha, seed=seed).frame()
+    df["coverage_95ci"] = [
+        f"{c:.3f} [{lo:.3f}, {hi:.3f}]"
+        for c, lo, hi in zip(df.coverage, df.ci_low, df.ci_high, strict=True)
+    ]
+    df["p_below"] = [f"{p:.2g}" for p in df.p_below_target]
+    columns = [
+        "experiment",
+        "method",
+        "score",
+        "n_classes",
+        "n_calibration",
+        "target",
+        "coverage_95ci",
+        "p_below",
+        "mean_set_size",
+        "abstention_rate",
+        "mean_ess",
+        "theory",
+    ]
+    title = f"Synthetic conformal validity checks ({n_trials} trials, seed {seed})"
+    csv_path, md_path = write_table(
+        df, reports / "tables" / "conformal_synthetic", markdown_columns=columns, title=title
+    )
+    run_dir = create_run_dir(reports, "simulate")
+    write_table(df, run_dir / "conformal_synthetic", markdown_columns=columns, title=title)
+    config = {"simulate": {"n_trials": n_trials, "alpha": alpha, "seed": seed}}
+    write_run_metadata(run_dir, config, seeds=[seed], extra={"command": "simulate"})
+    log.info("Wrote %s, %s and run folder %s", csv_path, md_path, run_dir)
+    typer.echo(md_path.read_text(encoding="utf-8"))
+
+
 @app.command("all")
 def run_all(config: ConfigOption = DEFAULT_EXPERIMENT, overrides: OverrideOption = None) -> None:
     """Run download, features, experiments and report in sequence."""

@@ -153,6 +153,8 @@ def save_config(config: Mapping[str, Any], path: str | Path) -> Path:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
-        yaml.safe_dump(dict(config), sort_keys=False, allow_unicode=True), encoding="utf-8"
+        yaml.safe_dump(dict(config), sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+        newline="\n",
     )
     return out
