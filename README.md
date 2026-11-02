@@ -65,6 +65,7 @@ survives distribution shift* in autism research.
 ## Pipeline
 
 ```mermaid
+%%{init: {"fontFamily": "arial, sans-serif", "themeVariables": {"fontFamily": "arial, sans-serif"}}}%%
 flowchart TD
     A["`**ABIDE I**
     1,112 subjects, 20 sites`"] --> B["`**Quality control**
