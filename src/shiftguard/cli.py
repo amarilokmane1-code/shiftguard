@@ -6,6 +6,7 @@
 ``shiftguard summarize`` rebuild a run's tables from its saved predictions
 ``shiftguard conformal`` conformal prediction under site shift (phase 5)
 ``shiftguard site-effect`` site effect on the features before / after ComBat
+``shiftguard detect``    label-free shift detection (phase 6)
 ``shiftguard report``    regenerate tables, figures and docs/RESULTS.md
 ``shiftguard all``       the whole pipeline
 """
@@ -330,6 +331,131 @@ def site_effect(
         effects["none"], effects["combat"], ds.sites, reports / "figures" / f"fig2_site_effect{sfx}"
     )
     typer.echo(table.round(3).to_string(index=False))
+    typer.echo(f"Run folder: {run_dir}")
+
+
+@app.command()
+def detect(
+    conformal_run: Annotated[Path, typer.Argument(help="Run folder of `shiftguard conformal`.")],
+) -> None:
+    """Phase 6: label-free signals vs the real coverage drop per deployment site."""
+    import json
+
+    import pandas as pd
+
+    from shiftguard.config import load_config
+    from shiftguard.evaluation import detection as det
+    from shiftguard.utils.paths import reports_dir
+    from shiftguard.utils.provenance import create_run_dir, write_run_metadata
+    from shiftguard.utils.tables import write_table
+    from shiftguard.viz.detection_figures import figure_class_gap, figure_detection
+
+    needed = [
+        conformal_run / n for n in ("config.yaml", "fold_diagnostics.csv", "site_coverage.csv")
+    ]
+    missing = [p.name for p in needed if not p.is_file()]
+    if missing:
+        log.error(
+            "%s is not a conformal run folder (missing %s)", conformal_run, ", ".join(missing)
+        )
+        raise typer.Exit(code=3)
+    cfg = load_config(needed[0])
+    alpha = float(cfg["conformal"]["alpha"])
+    n_boot = int(cfg["statistics"]["n_bootstrap"])
+    diag = pd.read_csv(needed[1], dtype={"test_site": str})
+    sites = pd.read_csv(needed[2], dtype={"test_site": str})
+    reports = reports_dir(cfg)
+    run_dir = create_run_dir(reports, "detection")
+    setup_logging("INFO", log_file=run_dir / "run.log")
+    write_run_metadata(
+        run_dir,
+        cfg,
+        seeds=sorted(diag["seed"].unique().tolist()),
+        extra={"command": "detect", "conformal_run": conformal_run.name},
+    )
+    loso = diag[diag["protocol"] == "loso"]
+    settings = [
+        (m, v)
+        for m, v in (("logreg", "none"), ("mlp", "none"), ("logreg", "combat"))
+        if ((loso["model"] == m) & (loso["variant"] == v)).any()
+    ]
+    site_sig = pd.concat(
+        [det.site_signals(diag, sites, alpha, m, v) for m, v in settings], ignore_index=True
+    )
+    corr = det.correlation_table(site_sig, n_boot=n_boot)
+    ref = {m: det.within_site_reference(diag, m) for m in sorted(set(diag["model"]))}
+    site_sig.to_csv(run_dir / "site_signals.csv", index=False, lineterminator="\n")
+    corr.to_csv(run_dir / "correlations.csv", index=False, lineterminator="\n")
+    (run_dir / "within_site_reference.json").write_text(
+        json.dumps(ref, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+    tag = cfg["experiment"].get("report_tag", "")
+    sfx = f"_{tag}" if tag else ""
+    src = f"run {run_dir.name}; conformal {conformal_run.name}"
+    c = corr.copy()
+    c["rho_ci"] = [
+        f"{r:+.2f} [{lo:+.2f}, {hi:+.2f}]"
+        for r, lo, hi in zip(c["rho"], c["ci_low"], c["ci_high"], strict=True)
+    ]
+    c["rho_leave_one_site_out"] = [
+        f"{lo:+.2f} to {hi:+.2f}" for lo, hi in zip(c["rho_loo_min"], c["rho_loo_max"], strict=True)
+    ]
+    write_table(
+        c,
+        reports / "tables" / f"detection_correlations{sfx}",
+        markdown_columns=[
+            "model",
+            "variant",
+            "signal",
+            "target",
+            "n_sites",
+            "rho_ci",
+            "rho_leave_one_site_out",
+            "p_value",
+            "q_value",
+            "rho_partial",
+            "q_partial",
+        ],
+        title=(
+            f"Label-free signals vs real coverage per deployment site (LOSO; {src}). "
+            "Spearman rho across sites, 95% percentile bootstrap CI over sites "
+            f"({n_boot} resamples), range of rho when each site is left out in turn, "
+            "two-sided permutation p (10,000), BH q within each "
+            "(model, variant); rho_partial / q_partial: partial Spearman given site size "
+            "(number of deployment subjects), its own permutation p and BH. "
+            "Targets: coverage_drop = target - split-CP coverage; "
+            "worst_class_drop = target - min class coverage; class_gap = ASD - TDC coverage."
+        ),
+    )
+    primary = site_sig[(site_sig["model"] == "logreg") & (site_sig["variant"] == "none")]
+    write_table(
+        primary,
+        reports / "tables" / f"detection_signals{sfx}",
+        markdown_columns=[
+            "test_site",
+            "n",
+            "coverage",
+            "coverage_drop",
+            "worst_class_drop",
+            *det.UNSIGNED,
+            *det.SIGNED,
+        ],
+        title=(
+            f"Label-free signals per deployment site (logistic regression, no harmonisation, "
+            f"mean over seeds; {src}). No-shift reference (within-site folds): "
+            + ", ".join(f"{k} {v:.3f}" for k, v in ref.get("logreg", {}).items())
+            + "."
+        ),
+    )
+    figs = reports / "figures"
+    figure_detection(site_sig, corr, ref.get("logreg", {}), figs / f"fig7_detection{sfx}")
+    figure_class_gap(site_sig, corr, figs / f"fig7b_detection_class_gap{sfx}")
+    p = corr[(corr["model"] == "logreg") & (corr["variant"] == "none")]
+    typer.echo(
+        p[["signal", "target", "rho", "ci_low", "ci_high", "q_value"]]
+        .round(3)
+        .to_string(index=False)
+    )
     typer.echo(f"Run folder: {run_dir}")
 
 

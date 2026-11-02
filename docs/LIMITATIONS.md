@@ -19,8 +19,22 @@ in phase 7. It states known risks up front so the results can be read against th
    estimates are noisy. Exact Clopper–Pearson intervals and a hierarchical (empirical-Bayes)
    estimate are reported, but power to detect under-coverage at a single site is limited.
 5. **Label-free detection is exploratory.** There are only as many data points as sites
-   (about 17), so correlations between label-free signals and coverage drop have wide
-   intervals. A negative result is a valid outcome.
+   (18), so any correlation needs $|\rho| \gtrsim 0.47$ to reach p < 0.05 before
+   correction, and the bootstrap intervals are wide. Each site's coverage is itself a
+   binomial estimate (25–172 subjects), and small sites have larger KS statistics and
+   more extreme class coverage by chance, so a size-adjusted (partial) correlation is
+   reported next to each one. Result:
+   - **Negative:** no label-free signal predicts the marginal coverage drop.
+   - **Robust:** the signed mean P(ASD) shift (and the EM prevalence shift) predicts
+     which class loses coverage.
+   - **Not robust to site size:** the KS-on-P(ASD) association with the worst-class drop.
+
+   Caveat on the positive result: the mean P(ASD) shift was added *after* phase 5 had
+   shown, on the same sites and using labels, that the calibration offset predicts the
+   class gap. It is the label-free counterpart of that offset. Its success therefore
+   confirms a hypothesis formed on the same data and is not an independent test. The
+   EM shift was requested in advance, and the other signals follow the original plan.
+   Nothing here has been replicated on an independent multi-site cohort.
 6. **Sites lost to QC.** CALTECH (rater-1 failures) and CMU (constant ROIs) are excluded,
    so 18 of 20 PCP sites remain. Constant ROIs are not zero-filled: that would create an
    artificial site signal. Instead, affected subjects are excluded, because 121 distinct

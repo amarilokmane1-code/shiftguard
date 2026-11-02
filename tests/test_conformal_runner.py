@@ -162,6 +162,19 @@ def test_cli_conformal_end_to_end(tmp_path):
     assert len(h2) > 0
     assert (tmp_path / "figures" / "fig3_coverage_per_site_alpha0p2.png").is_file()
     assert runner.invoke(app, ["conformal", str(base), "--alpha", "1.5"]).exit_code == 2
+    # phase 6 on the main conformal run
+    conf = sorted(p for p in (tmp_path / "runs").iterdir() if p.name.endswith("_conformal"))[0]
+    res = runner.invoke(app, ["detect", str(conf)])
+    assert res.exit_code == 0, res.output
+    corr = pd.read_csv(tables / "detection_correlations.csv")
+    assert {"coverage_drop", "worst_class_drop", "class_gap"} <= set(corr.target)
+    assert corr.loc[corr.target == "class_gap", "signal"].tolist()[:2] == [
+        "mean_p_shift",
+        "em_shift",
+    ]
+    for fig in ("fig7_detection", "fig7b_detection_class_gap"):
+        assert (tmp_path / "figures" / f"{fig}.png").is_file(), fig
+    assert runner.invoke(app, ["detect", str(base)]).exit_code == 3
 
 
 def test_combat_arm_never_reads_deployment_labels():

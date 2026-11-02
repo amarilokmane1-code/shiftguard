@@ -7,6 +7,22 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Phase 6: label-free shift detection (`shiftguard detect <conformal run>`,
+  `evaluation/detection.py`). Eight signals per deployment site, computed from features
+  and predictions only (a permutation test checks they ignore deployment labels):
+  domain AUC, KS on P(ASD) and on confidence, confidence shift, abstention and its shift,
+  mean P(ASD) shift, EM prevalence shift. They are related to the marginal coverage drop,
+  the worst-class drop and the signed class gap. Statistics: Spearman with bootstrap CI,
+  permutation p, BH, leave-one-site-out range, and partial correlation given site size.
+  Within-site folds give the no-shift reference. Settings: logistic regression, MLP,
+  ComBat. Tables `detection_correlations`, `detection_signals`; Figures 7 and 7b.
+- Phase 6 results (run `2026-11-02_150802_detection`):
+  - No signal predicts the marginal coverage drop (all q >= 0.23).
+  - The signed mean P(ASD) shift predicts which class loses coverage (rho = 0.83,
+    q = 0.001, size-adjusted 0.82; MLP 0.86); the EM shift does the same (0.82).
+  - KS on P(ASD) vs worst-class drop (rho = 0.67, q = 0.019) does not survive
+    adjustment for site size (partial 0.53, q = 0.14).
+  - Abstention rate is not an alarm (rho = -0.22).
 - Phase 5: conformal prediction under site shift. `shiftguard conformal <baseline run>
   [--combat <run>]` reuses saved predictions. The calibration split is divided into
   halves stratified by site × diagnosis: one fits the temperature, the other is the

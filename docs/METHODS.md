@@ -342,7 +342,60 @@ opposite way. Post-ComBat accuracy can therefore fall slightly *below* chance; t
 means "no site signal left", not anti-information.
 
 ## 6. Label-free shift detection
-TBD (phase 6).
+
+`evaluation/detection.py`, `shiftguard detect <conformal run>`, Figure 7. **Exploratory**:
+there are 18 data points (deployment sites), and each site's coverage is itself a
+binomial estimate from 25–172 subjects.
+
+**Signals.** For every LOSO fold, each signal uses only the deployment site's features
+and predictions, never its labels. A unit test permutes the deployment labels and checks
+that every signal is unchanged. The reference is calibration half B, which is
+exchangeable with the source.
+
+| Signal | Definition |
+|---|---|
+| domain AUC | out-of-fold AUC of the domain classifier (§4.5), training vs deployment features |
+| KS, P(ASD) | two-sample Kolmogorov–Smirnov statistic between half B and the deployment site |
+| KS, confidence | the same on the max-probability $\max_y \hat p(y \mid x)$ |
+| \|confidence shift\| | \|mean max-probability (deployment) − (half B)\| |
+| abstention | split-CP abstention rate at the deployment site |
+| \|abstention shift\| | \|abstention (deployment) − abstention (half B, in-sample)\| |
+| \|mean P(ASD) shift\| | \|mean P(ASD) (deployment) − (half B)\| |
+| \|EM prevalence shift\| | \|EM-estimated deployment ASD fraction (§4.6) − source fraction\| |
+
+Signals are averaged over the 10 seeds per site. Their mean on within-site folds (no
+shift) is reported as a reference.
+
+**Targets** (from the labels, for evaluation only), seed-averaged per site:
+- coverage drop = $(1-\alpha)$ − split-CP coverage;
+- worst-class drop = $(1-\alpha)$ − min(ASD coverage, TDC coverage).
+
+The signed signals (mean P(ASD) shift, EM prevalence shift) are also compared with the
+signed class gap (ASD − TDC coverage), to ask whether a signal can tell *which* class
+loses coverage.
+
+**Statistics.**
+- Spearman $\rho$ across sites.
+- 95% percentile bootstrap CI, resampling sites (2000 resamples).
+- Two-sided permutation p-value (10,000 permutations of the target ranks).
+- Benjamini–Hochberg across all signal × target tests of a setting.
+- Settings: logistic regression (primary), MLP, and logistic regression after ComBat.
+
+Two robustness checks are reported for every test:
+- **Leave-one-site-out range.** The range of $\rho$ when each site is removed in turn.
+- **Partial Spearman correlation given site size** ($n$ deployment subjects). Under no
+  shift, KS statistics scale like $1/\sqrt{n}$ (larger for small sites), and a small site's coverage, especially
+  its worst class, is more extreme by chance, so site size alone can create a
+  correlation. The partial correlation is the Pearson correlation of the rank residuals
+  after regressing the ranks of signal and target on the rank of $n$. It has its own
+  permutation p-value (residuals permuted) and BH q-value.
+
+A permutation test of $n = 18$ has a minimum detectable $|\rho|$ of about 0.47 at
+$p = 0.05$ (before BH).
+
+**What "detected" would mean.** A signal that ranks sites by their coverage drop could
+trigger extra labelling (Mondrian) or a refusal to deploy. A null result is reported as
+such.
 
 ## 7. Statistical inference
 
