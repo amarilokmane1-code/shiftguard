@@ -309,7 +309,14 @@ def build_results_md(reports: Path, manifest: dict[str, str]) -> str:
                 }
             )
     if prov:
-        out += [to_markdown(pd.DataFrame(prov)), ""]
+        out += [
+            to_markdown(pd.DataFrame(prov)),
+            "",
+            "*Uncommitted changes* means code, configs or docs differed from the commit "
+            "when the run started. Tables and figures under `reports/` rewritten by an "
+            "earlier step of the same pipeline are outputs and do not count.",
+            "",
+        ]
         if any(r["uncommitted changes"] == "yes" for r in prov):
             out += [
                 "Runs marked *uncommitted changes* were made from a working tree with edits "

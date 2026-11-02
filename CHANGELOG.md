@@ -177,6 +177,10 @@ All notable changes to this project are documented here. The format follows
   weighted arm; the Kaggle notebook shows the measured install time.
 
 ### Fixed
+- Provenance: a run's `dirty` flag no longer counts tables and figures under `reports/`
+  rewritten by earlier steps of the same `shiftguard all`; those paths are listed in
+  `git.outputs_modified` instead. Before, every step after the first was marked dirty
+  even when started from a clean commit.
 - `.gitignore` now anchors `/data/` (previously also ignored `src/shiftguard/data/` and
   `configs/data/`).
 - README quoted q = 0.043 for ComBat's shortfall gain from an earlier run; with the

@@ -1,13 +1,21 @@
 import json
 import logging
+import shutil
+import subprocess
 from datetime import datetime
 
 import numpy as np
+import pytest
 import yaml
 
 from shiftguard.utils.log import get_logger, setup_logging
 from shiftguard.utils.paths import project_root, resolve_path
-from shiftguard.utils.provenance import create_run_dir, package_versions, write_run_metadata
+from shiftguard.utils.provenance import (
+    create_run_dir,
+    git_info,
+    package_versions,
+    write_run_metadata,
+)
 from shiftguard.utils.seeding import derive_seed, set_global_seed
 
 
@@ -44,6 +52,36 @@ def test_write_run_metadata(tmp_path):
     assert meta["packages"]["numpy"] == np.__version__
     saved = yaml.safe_load((tmp_path / "config.yaml").read_text(encoding="utf-8"))
     assert saved == cfg
+
+
+def _git(repo, *args):
+    subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+def test_git_info_separates_outputs_from_source(tmp_path):
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "config", "user.email", "t@example.com")
+    _git(tmp_path, "config", "user.name", "t")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "reports" / "tables").mkdir(parents=True)
+    (tmp_path / "src" / "a.py").write_text("x = 1\n")
+    (tmp_path / "reports" / "tables" / "t.csv").write_text("a\n1\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "init")
+
+    clean = git_info(tmp_path)
+    assert clean["dirty"] is False and clean["outputs_modified"] == []
+
+    # A table rewritten by an earlier pipeline step is an output, not a code change.
+    (tmp_path / "reports" / "tables" / "t.csv").write_text("a\n2\n")
+    outputs_only = git_info(tmp_path)
+    assert outputs_only["dirty"] is False
+    assert outputs_only["outputs_modified"] == ["reports/tables/t.csv"]
+
+    # Any change outside reports/ makes the run dirty, also when called from a subfolder.
+    (tmp_path / "src" / "a.py").write_text("x = 2\n")
+    assert git_info(tmp_path / "src")["dirty"] is True
 
 
 def test_package_versions_handles_missing():

@@ -34,8 +34,19 @@ TRACKED_PACKAGES: tuple[str, ...] = (
 )
 
 
+#: Folders the pipeline itself writes (tables, figures, manifest). Edits there are outputs
+#: of earlier steps, not code, so they do not make a later run "dirty"; they are still
+#: listed in ``outputs_modified``.
+OUTPUT_PATHS: tuple[str, ...] = ("reports",)
+
+
 def git_info(repo: str | Path | None = None) -> dict[str, Any]:
-    """Return the current commit hash and dirty flag, or ``None`` values outside git."""
+    """Return the commit hash and dirty flags, or ``None`` values outside git.
+
+    ``dirty`` is true when anything outside :data:`OUTPUT_PATHS` differs from the commit
+    (code, configs, docs, untracked files). ``outputs_modified`` lists the changed paths
+    under :data:`OUTPUT_PATHS`, for example tables rewritten by an earlier pipeline step.
+    """
     cwd = Path(repo) if repo else None
 
     def _git(*args: str) -> str | None:
@@ -45,11 +56,23 @@ def git_info(repo: str | Path | None = None) -> dict[str, Any]:
             )
         except (OSError, subprocess.SubprocessError):
             return None
-        return out.stdout.strip()
+        return out.stdout.rstrip()
 
     commit = _git("rev-parse", "HEAD")
-    status = _git("status", "--porcelain") if commit else None
-    return {"commit": commit, "dirty": bool(status) if status is not None else None}
+    if not commit:
+        return {"commit": None, "dirty": None, "outputs_modified": None}
+    # ":(top)" makes each pathspec relative to the repository root, not the cwd.
+    outputs_spec = [f":(top){p}" for p in OUTPUT_PATHS]
+    excludes = [f":(top,exclude){p}" for p in OUTPUT_PATHS]
+    source = _git("status", "--porcelain", "--", ":/", *excludes)
+    outputs = _git("status", "--porcelain", "--", *outputs_spec)
+    return {
+        "commit": commit,
+        "dirty": bool(source) if source is not None else None,
+        "outputs_modified": [line[3:] for line in outputs.splitlines()]
+        if outputs is not None
+        else None,
+    }
 
 
 def package_versions(packages: Iterable[str] = TRACKED_PACKAGES) -> dict[str, str | None]:
