@@ -19,7 +19,9 @@ from shiftguard.viz.style import (
     NEUTRAL,
     TEXT_SECONDARY,
     apply_style,
+    label_points,
     save_figure,
+    spread_positions,
 )
 
 PRIMARY = "logreg"
@@ -208,24 +210,31 @@ def figure_tradeoff(
     pts = h[h["abstention"] < 0.999]  # arms that abstain on everyone are left out
     ax.axvline(1 - alpha, color=GRID, linewidth=1.0)
     ax.scatter(pts["worst_site_coverage"], pts["abstention"], s=24, color=POINT, zorder=3)
-    # points cluster tightly: labels go in a column right of the axes, in the points'
-    # vertical order, with leader lines (no overlapping text)
-    pts = pts.sort_values("abstention")
-    for i, (_, r) in enumerate(pts.iterrows()):
-        ax.annotate(
-            LABELS.get(r["method"], r["method"]),
-            (r["worst_site_coverage"], r["abstention"]),
-            xytext=(1.04, (i + 0.5) / len(pts)),
-            textcoords="axes fraction",
-            va="center",
-            fontsize=6.5,
-            color=TEXT_SECONDARY,
-            arrowprops={"arrowstyle": "-", "color": GRID, "linewidth": 0.7},
-        )
     ax.set_xlabel("Worst-site coverage")
     ax.set_ylabel("Abstention rate")
     ax.set_title("Every LOSO method", fontsize=9)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 0.88, 1))
+    # points cluster tightly: labels go in a column right of the axes, each as close to
+    # its point's height as the spacing allows, so leader lines stay short and in order
+    fontsize = 6.5
+    height_pt = ax.get_window_extent().height * 72 / fig.dpi
+    to_axes = ax.transAxes.inverted().transform
+    y_pt = [
+        to_axes(ax.transData.transform((x, y)))[1]
+        for x, y in zip(pts["worst_site_coverage"], pts["abstention"], strict=True)
+    ]
+    y_lab = spread_positions(y_pt, gap=fontsize * 1.45 / height_pt, lo=0.02, hi=0.98)
+    for (_, r), yl in zip(pts.iterrows(), y_lab, strict=True):
+        ax.annotate(
+            LABELS.get(r["method"], r["method"]),
+            (r["worst_site_coverage"], r["abstention"]),
+            xytext=(1.04, yl),
+            textcoords="axes fraction",
+            va="center",
+            fontsize=fontsize,
+            color=TEXT_SECONDARY,
+            arrowprops={"arrowstyle": "-", "color": GRID, "linewidth": 0.7, "shrinkB": 3},
+        )
     return save_figure(fig, stem)
 
 
@@ -265,8 +274,8 @@ def figure_abstention_per_site(sites: pd.DataFrame, stem: str | Path) -> tuple[P
             label="accuracy if not abstained",
         )
         ax.set_title(
-            f"{LABELS.get(m, m)}\nsite means: abstention {g['abstention'].mean():.0%}, "
-            f"accuracy {g['selective_accuracy'].mean():.0%}",
+            f"{LABELS.get(m, m)}\nabstention {g['abstention'].mean():.0%}\n"
+            f"accuracy if not abstained {g['selective_accuracy'].mean():.0%}",
             fontsize=8,
         )
         ax.set_xlim(0, 1.02)
@@ -276,7 +285,15 @@ def figure_abstention_per_site(sites: pd.DataFrame, stem: str | Path) -> tuple[P
     axes[0, 0].invert_yaxis()
     handles, labels = axes[0, 0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper right", ncol=2, fontsize=7, frameon=False)
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    fig.text(
+        0.01,
+        0.995,
+        f"Titles: means over the {len(order)} deployment sites",
+        fontsize=7,
+        color=TEXT_SECONDARY,
+        va="top",
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     return save_figure(fig, stem)
 
 
@@ -287,7 +304,7 @@ def figure_prevalence(prev: pd.DataFrame, stem: str | Path) -> tuple[Path, Path]
     after the EM adjustment, against the true prevalence shift.
     """
     apply_style()
-    fig, axes = plt.subplots(1, 2, figsize=(8.4, 3.8))
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.2))
     ax = axes[0]
     ax.plot([0, 1], [0, 1], color=GRID, linewidth=1.0, zorder=1)
     ax.errorbar(
@@ -300,18 +317,8 @@ def figure_prevalence(prev: pd.DataFrame, stem: str | Path) -> tuple[Path, Path]
         elinewidth=1.0,
         zorder=3,
     )
-    for _, r in prev.iterrows():
-        ax.annotate(
-            r["test_site"],
-            (r["pi_target_true"], r["pi_target_em"]),
-            xytext=(3, 2),
-            textcoords="offset points",
-            fontsize=6,
-            color=TEXT_SECONDARY,
-        )
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
-    ax.set_aspect("equal")
     ax.set_xlabel("True ASD fraction at the site")
     ax.set_ylabel("EM estimate (no labels)")
     ax.set_title("Prevalence estimated without labels", fontsize=9)
@@ -348,19 +355,27 @@ def figure_prevalence(prev: pd.DataFrame, stem: str | Path) -> tuple[Path, Path]
     ax.scatter(
         prev["true_shift"], prev["cil_test_em"], s=26, color=POINT, zorder=3, label="after EM"
     )
-    for _, r in prev.iterrows():
-        ax.annotate(
-            r["test_site"],
-            (r["true_shift"], r["cil_test"]),
-            xytext=(3, 2),
-            textcoords="offset points",
-            fontsize=6,
-            color=TEXT_SECONDARY,
-        )
     ax.set_xlim(-lim, lim)
     ax.set_xlabel("True prevalence shift (target \N{MINUS SIGN} source ASD fraction)")
     ax.set_ylabel("Mean P(ASD) \N{MINUS SIGN} ASD fraction")
     ax.set_title("Calibration-in-the-large per site", fontsize=9)
-    ax.legend(loc="upper right", fontsize=6.5)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), fontsize=6.5)
     fig.tight_layout()
+    # labels also keep clear of the error bars (left) and of the EM-adjusted points and
+    # their connecting lines (right)
+    sites = prev["test_site"].tolist()
+    t = np.linspace(-1.0, 1.0, 9)
+    x_true = np.repeat(prev["pi_target_true"].to_numpy(), len(t))
+    bars = prev["pi_target_em"].to_numpy()[:, None] + np.outer(prev["pi_target_em_sd"], t)
+    label_points(
+        axes[0], prev["pi_target_true"], prev["pi_target_em"], sites, avoid=(x_true, bars.ravel())
+    )
+    u = np.linspace(0.0, 1.0, 9)
+    x_shift = np.repeat(prev["true_shift"].to_numpy(), len(u))
+    lines = prev["cil_test"].to_numpy()[:, None] + np.outer(
+        prev["cil_test_em"] - prev["cil_test"], u
+    )
+    label_points(
+        axes[1], prev["true_shift"], prev["cil_test"], sites, avoid=(x_shift, lines.ravel())
+    )
     return save_figure(fig, stem)

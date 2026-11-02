@@ -14,6 +14,7 @@ from shiftguard.viz.style import (
     GRID,
     TEXT_SECONDARY,
     apply_style,
+    label_points,
     save_figure,
 )
 
@@ -97,15 +98,8 @@ def figure_class_gap(
     for ax, s in zip(axes[0], c.index, strict=True):
         ax.axvline(0, color=GRID, linewidth=1.0, zorder=1)
         _panel(ax, g, s, "class_gap", c.loc[s], None)
-        for _, r in g.iterrows():
-            ax.annotate(
-                r["test_site"],
-                (r[s], r["class_gap"]),
-                xytext=(3, 2),
-                textcoords="offset points",
-                fontsize=5.5,
-                color=TEXT_SECONDARY,
-            )
     axes[0, 0].set_ylabel(TARGET_LABELS["class_gap"])
     fig.tight_layout()
+    for ax, s in zip(axes[0], c.index, strict=True):
+        label_points(ax, g[s], g["class_gap"], g["test_site"].tolist(), fontsize=5.5)
     return save_figure(fig, stem)
