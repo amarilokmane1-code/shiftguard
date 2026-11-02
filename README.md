@@ -65,6 +65,7 @@ survives distribution shift* in autism research.
 ## Pipeline
 
 ```mermaid
+%%{init: {"flowchart": {"htmlLabels": false}}}%%
 flowchart TD
     A["ABIDE I<br/>1,112 subjects, 20 sites"] --> B["Quality control<br/>944 subjects, 18 sites"]
     B --> C["Connectomes<br/>CC200 atlas, 19,900 edges"]
