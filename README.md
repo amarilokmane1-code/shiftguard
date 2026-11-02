@@ -65,16 +65,22 @@ survives distribution shift* in autism research.
 ## Pipeline
 
 ```mermaid
-flowchart LR
-    A["ABIDE I<br/>1,112 subjects, 20 sites"] --> B["Quality control<br/>944 subjects, 18 sites"]
-    B --> C["Connectomes<br/>CC200, 19,900 edges"]
-    C -. optional .-> H["ComBat<br/>harmonisation"]
-    C --> D["Models<br/>L2 logistic regression, MLP"]
-    H -.-> D
-    D --> E["Calibration<br/>temperature scaling"]
-    E --> F["Conformal methods<br/>split, class-conditional, Mondrian,<br/>weighted, label-shift"]
-    F --> G["Evaluation<br/>coverage per site and class,<br/>abstention, bootstrap"]
-    G --> I["Label-free detection<br/>8 signals vs coverage loss"]
+flowchart TB
+    subgraph data ["1 · Data and models"]
+        direction LR
+        A["ABIDE I<br/>1,112 subjects, 20 sites"] --> B["Quality control<br/>944 subjects, 18 sites"]
+        B --> C["Connectomes<br/>CC200, 19,900 edges"]
+        C -. optional .-> H["ComBat<br/>harmonisation"]
+        C --> D["Models<br/>logistic regression, MLP"]
+        H -.-> D
+    end
+    subgraph analysis ["2 · Uncertainty and evaluation"]
+        direction LR
+        E["Calibration<br/>temperature scaling"] --> F["Conformal methods<br/>split, class-conditional,<br/>Mondrian, weighted, label-shift"]
+        F --> G["Evaluation<br/>coverage per site and class,<br/>abstention, bootstrap"]
+        G --> I["Label-free detection<br/>8 signals vs coverage loss"]
+    end
+    data --> analysis
 ```
 
 Every model is trained with **leave-one-site-out (LOSO)**: one site plays the new hospital
