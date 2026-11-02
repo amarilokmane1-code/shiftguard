@@ -40,6 +40,7 @@ def test_readme_block_needs_markers(tmp_path):
     assert "old" not in text and "| LOSO | Split CP |" in text and text.endswith("b\n")
 
 
+@pytest.mark.slow
 def test_all_then_report_end_to_end(tmp_path):
     pytest.importorskip("neuroHarmonize")
     runner = CliRunner()

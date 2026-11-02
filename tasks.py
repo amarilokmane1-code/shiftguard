@@ -48,8 +48,10 @@ def test_fast() -> None:
 
 
 def pipeline() -> None:
-    """Whole ABIDE pipeline (downloads data on first run)."""
-    _run(PY, "-m", "shiftguard.cli", "all", "--config", "configs/experiment/loso.yaml")
+    """Whole ABIDE pipeline + report (downloads data on first run; several hours)."""
+    cfg = ("--config", "configs/experiment/loso.yaml")
+    _run(PY, "-m", "shiftguard.cli", "all", *cfg, "--sensitivity")
+    _run(PY, "-m", "shiftguard.cli", "report", *cfg)
 
 
 def synthetic() -> None:
