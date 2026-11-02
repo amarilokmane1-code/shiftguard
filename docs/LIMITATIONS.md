@@ -1,7 +1,7 @@
 # Limitations
 
-*This file is written before any experiment runs and is updated with concrete findings
-in phase 7. It states known risks up front so the results can be read against them.*
+*Items 1–6 were written before any experiment ran, as the known risks; they have since been
+updated with what the experiments showed. Items 7–12 come from the results.*
 
 1. **Modest discriminative performance.** ASD vs control classification from resting-state
    connectivity on ABIDE is modest in the literature, especially under leave-one-site-out
@@ -83,7 +83,9 @@ in phase 7. It states known risks up front so the results can be read against th
     this benchmark, ComBat removed the site signal (site balanced accuracy 0.55 → 0.05,
    chance 0.06), raised the refitted model's LOSO AUC from 0.731 to 0.749 and
     gave the best worst-site coverage among label-free methods. The improvement in mean
-    shortfall is modest (−0.017, 95% CI [−0.035, −0.002]).
+    shortfall is modest: −0.017, 95% CI [−0.035, −0.002] with the site bootstrap. It is
+    not significant under the two-stage bootstrap, which also resamples subjects within
+    sites: [−0.038, +0.000], q = 0.076.
 11. **Abstention is high because the classifier is weak.** At α = 0.1, more than half
     of the deployment subjects receive both labels (split CP abstention 0.554). At
     α = 0.2 this halves (0.277), but the worst site-class coverage falls to 0.36. Lower

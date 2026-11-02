@@ -1,4 +1,4 @@
-# Synthetic conformal validity checks (4000 trials, seed 0)
+# Synthetic conformal validity checks (4000 trials, seed 0); run 2026-11-01_175354_simulate
 
 | experiment | method | score | n_classes | n_calibration | target | coverage_95ci | p_below | mean_set_size | abstention_rate | mean_ess | theory |
 |---|---|---|---|---|---|---|---|---|---|---|---|

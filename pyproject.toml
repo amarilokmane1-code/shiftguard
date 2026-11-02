@@ -96,8 +96,10 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]
-"notebooks/**" = ["D", "E402", "E501"]
+"notebooks/**" = ["D", "E402", "E501", "RUF001"]
 "tasks.py" = ["D"]
+# RESULTS.md generator: typographic dashes, minus signs and Greek letters are intended
+"src/shiftguard/evaluation/report.py" = ["RUF001"]
 
 # --------------------------------------------------------------------------- pytest
 [tool.pytest.ini_options]

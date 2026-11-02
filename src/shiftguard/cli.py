@@ -130,7 +130,7 @@ def run(
     config: ConfigOption = DEFAULT_EXPERIMENT,
     overrides: OverrideOption = None,
     n_jobs: Annotated[int | None, typer.Option(help="Parallel fold fits (-1 = all).")] = None,
-) -> None:
+) -> Path:
     """Run an experiment (LOSO and/or within-site) described by a YAML config."""
     from shiftguard.config import load_config
     from shiftguard.data.synthetic import load_any_dataset
@@ -163,6 +163,7 @@ def run(
         ].to_string(index=False)
     )
     typer.echo(f"Run folder: {run_dir}")
+    return run_dir
 
 
 @app.command()
@@ -198,7 +199,7 @@ def conformal(
         float | None,
         typer.Option(help="Override the miscoverage level (sensitivity analysis)."),
     ] = None,
-) -> None:
+) -> Path:
     """Phase 5: conformal prediction under site shift, from saved baseline predictions.
 
     With ``--alpha``, outputs carry an ``alpha<value>`` report tag (e.g. ``_alpha0p2``),
@@ -259,25 +260,26 @@ def conformal(
     cols = ["protocol", "model", "method", "coverage", "worst_site_coverage", "abstention"]
     typer.echo(head[[c for c in cols if c in head]].round(3).to_string(index=False))
     typer.echo(f"Run folder: {run_dir}")
+    return run_dir
 
 
 @app.command("site-effect")
 def site_effect(
     config: ConfigOption = DEFAULT_EXPERIMENT, overrides: OverrideOption = None
-) -> None:
+) -> Path:
     """Describe the site effect on the features, before and after ComBat (Figure 2)."""
     import copy
 
-    import pandas as pd
-
     from shiftguard.config import load_config
     from shiftguard.data.synthetic import load_any_dataset
-    from shiftguard.evaluation.site_effect import describe_site_effect
+    from shiftguard.evaluation.site_effect import (
+        describe_site_effect,
+        save_site_effect,
+        write_site_effect_outputs,
+    )
     from shiftguard.features.harmonize import harmonize_dataset
     from shiftguard.utils.paths import reports_dir
     from shiftguard.utils.provenance import create_run_dir, write_run_metadata
-    from shiftguard.utils.tables import write_table
-    from shiftguard.viz.site_effect_figure import figure_site_effect
 
     cfg = load_config(config, overrides)
     cfg.setdefault("features", {})["harmonization"] = "none"
@@ -295,49 +297,19 @@ def site_effect(
         name: describe_site_effect(d.features, ds.sites, cov, seed=seed)
         for name, d in (("none", ds), ("combat", ds_c))
     }
-    table = pd.DataFrame(
-        [
-            {
-                "harmonization": name,
-                "n_subjects": len(ds.labels),
-                "n_sites": len(set(ds.sites)),
-                "site_balanced_accuracy": e.site_balanced_accuracy,
-                "chance": e.chance,
-                "r2_site": e.r2_site,
-                "r2_site_partial": e.r2_site_partial,
-            }
-            for name, e in effects.items()
-        ]
-    )
-    comps = pd.concat(
-        [e.per_component.assign(harmonization=n) for n, e in effects.items()], ignore_index=True
-    )
-    table.to_csv(run_dir / "site_effect.csv", index=False, lineterminator="\n")
-    comps.to_csv(run_dir / "site_effect_components.csv", index=False, lineterminator="\n")
-    tag = cfg["experiment"].get("report_tag", "")
-    sfx = f"_{tag}" if tag else ""
-    write_table(
-        table,
-        reports / "tables" / f"site_effect{sfx}",
-        title=(
-            f"Site effect on the connectome (run {run_dir.name}). Site balanced accuracy: "
-            "5-fold CV (scaler, PCA 50, multinomial L2 logistic regression), chance = "
-            "1 / sites. r2_site: R^2 of site dummies on the 10 leading principal components, "
-            "weighted by explained variance; r2_site_partial: beyond age, sex and diagnosis. "
-            "ComBat uses age and sex only."
-        ),
-    )
-    figure_site_effect(
-        effects["none"], effects["combat"], ds.sites, reports / "figures" / f"fig2_site_effect{sfx}"
+    save_site_effect(run_dir, effects, ds.sites)
+    table = write_site_effect_outputs(
+        effects, ds.sites, run_dir.name, reports, cfg["experiment"].get("report_tag", "")
     )
     typer.echo(table.round(3).to_string(index=False))
     typer.echo(f"Run folder: {run_dir}")
+    return run_dir
 
 
 @app.command()
 def detect(
     conformal_run: Annotated[Path, typer.Argument(help="Run folder of `shiftguard conformal`.")],
-) -> None:
+) -> Path:
     """Phase 6: label-free signals vs the real coverage drop per deployment site."""
     import json
 
@@ -347,8 +319,6 @@ def detect(
     from shiftguard.evaluation import detection as det
     from shiftguard.utils.paths import reports_dir
     from shiftguard.utils.provenance import create_run_dir, write_run_metadata
-    from shiftguard.utils.tables import write_table
-    from shiftguard.viz.detection_figures import figure_class_gap, figure_detection
 
     needed = [
         conformal_run / n for n in ("config.yaml", "fold_diagnostics.csv", "site_coverage.csv")
@@ -389,67 +359,7 @@ def detect(
     (run_dir / "within_site_reference.json").write_text(
         json.dumps(ref, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
-    tag = cfg["experiment"].get("report_tag", "")
-    sfx = f"_{tag}" if tag else ""
-    src = f"run {run_dir.name}; conformal {conformal_run.name}"
-    c = corr.copy()
-    c["rho_ci"] = [
-        f"{r:+.2f} [{lo:+.2f}, {hi:+.2f}]"
-        for r, lo, hi in zip(c["rho"], c["ci_low"], c["ci_high"], strict=True)
-    ]
-    c["rho_leave_one_site_out"] = [
-        f"{lo:+.2f} to {hi:+.2f}" for lo, hi in zip(c["rho_loo_min"], c["rho_loo_max"], strict=True)
-    ]
-    write_table(
-        c,
-        reports / "tables" / f"detection_correlations{sfx}",
-        markdown_columns=[
-            "model",
-            "variant",
-            "signal",
-            "target",
-            "n_sites",
-            "rho_ci",
-            "rho_leave_one_site_out",
-            "p_value",
-            "q_value",
-            "rho_partial",
-            "q_partial",
-        ],
-        title=(
-            f"Label-free signals vs real coverage per deployment site (LOSO; {src}). "
-            "Spearman rho across sites, 95% percentile bootstrap CI over sites "
-            f"({n_boot} resamples), range of rho when each site is left out in turn, "
-            "two-sided permutation p (10,000), BH q within each "
-            "(model, variant); rho_partial / q_partial: partial Spearman given site size "
-            "(number of deployment subjects), its own permutation p and BH. "
-            "Targets: coverage_drop = target - split-CP coverage; "
-            "worst_class_drop = target - min class coverage; class_gap = ASD - TDC coverage."
-        ),
-    )
-    primary = site_sig[(site_sig["model"] == "logreg") & (site_sig["variant"] == "none")]
-    write_table(
-        primary,
-        reports / "tables" / f"detection_signals{sfx}",
-        markdown_columns=[
-            "test_site",
-            "n",
-            "coverage",
-            "coverage_drop",
-            "worst_class_drop",
-            *det.UNSIGNED,
-            *det.SIGNED,
-        ],
-        title=(
-            f"Label-free signals per deployment site (logistic regression, no harmonisation, "
-            f"mean over seeds; {src}). No-shift reference (within-site folds): "
-            + ", ".join(f"{k} {v:.3f}" for k, v in ref.get("logreg", {}).items())
-            + "."
-        ),
-    )
-    figs = reports / "figures"
-    figure_detection(site_sig, corr, ref.get("logreg", {}), figs / f"fig7_detection{sfx}")
-    figure_class_gap(site_sig, corr, figs / f"fig7b_detection_class_gap{sfx}")
+    det.write_detection_outputs(site_sig, corr, ref, cfg, run_dir.name, conformal_run.name, reports)
     p = corr[(corr["model"] == "logreg") & (corr["variant"] == "none")]
     typer.echo(
         p[["signal", "target", "rho", "ci_low", "ci_high", "q_value"]]
@@ -457,12 +367,45 @@ def detect(
         .to_string(index=False)
     )
     typer.echo(f"Run folder: {run_dir}")
+    return run_dir
 
 
 @app.command()
-def report(config: ConfigOption = DEFAULT_EXPERIMENT, overrides: OverrideOption = None) -> None:
-    """Regenerate tables, figures and docs/RESULTS.md from saved results."""
-    _not_ready("report", 7)
+def report(
+    config: ConfigOption = DEFAULT_EXPERIMENT,
+    overrides: OverrideOption = None,
+    manifest: Annotated[
+        Path | None,
+        typer.Option(help="Run manifest (default: <reports_dir>/final_runs.yaml)."),
+    ] = None,
+    results: Annotated[Path, typer.Option(help="Output Markdown file.")] = Path("docs/RESULTS.md"),
+    readme: Annotated[
+        Path | None, typer.Option(help="README whose key-results block is refreshed.")
+    ] = Path("README.md"),
+) -> None:
+    """Regenerate tables, figures and docs/RESULTS.md from the saved final runs."""
+    from shiftguard.config import load_config
+    from shiftguard.evaluation import report as rep
+    from shiftguard.utils.paths import reports_dir
+
+    cfg = load_config(config, overrides)
+    reports = reports_dir(cfg)
+    path = manifest or reports / rep.MANIFEST
+    if not path.is_file():
+        log.error("No run manifest at %s (written by `shiftguard all`)", path)
+        raise typer.Exit(code=3)
+    runs = rep.load_manifest(path)
+    status = rep.regenerate(runs, reports)
+    results.parent.mkdir(parents=True, exist_ok=True)
+    results.write_text(rep.build_results_md(reports, runs), encoding="utf-8", newline="\n")
+    for key, st in status.items():
+        typer.echo(f"{key:<20} {runs[key]:<34} {st}")
+    typer.echo(f"Wrote {results}")
+    if readme is not None and readme.is_file():
+        if rep.update_readme(readme, reports / "tables"):
+            typer.echo(f"Updated the key-results block of {readme}")
+        else:
+            log.warning("%s has no key-results markers; not updated", readme)
 
 
 @app.command()
@@ -471,49 +414,89 @@ def simulate(
     alpha: Annotated[float, typer.Option(help="Miscoverage level.")] = 0.1,
     seed: Annotated[int, typer.Option(help="Random seed.")] = 0,
     reports: Annotated[Path, typer.Option("--reports-dir", help="Output root.")] = Path("reports"),
-) -> None:
+) -> Path:
     """Synthetic validity checks of the conformal core (no data needed)."""
-    from shiftguard.evaluation.simulation import run_all_simulations
+    from shiftguard.evaluation.simulation import run_all_simulations, write_simulation_tables
     from shiftguard.utils.provenance import create_run_dir, write_run_metadata
-    from shiftguard.utils.tables import write_table
 
     log.info("Running synthetic conformal experiments (n_trials=%d, seed=%d)", n_trials, seed)
     df = run_all_simulations(n_trials=n_trials, alpha=alpha, seed=seed).frame()
-    df["coverage_95ci"] = [
-        f"{c:.3f} [{lo:.3f}, {hi:.3f}]"
-        for c, lo, hi in zip(df.coverage, df.ci_low, df.ci_high, strict=True)
-    ]
-    df["p_below"] = [f"{p:.2g}" for p in df.p_below_target]
-    columns = [
-        "experiment",
-        "method",
-        "score",
-        "n_classes",
-        "n_calibration",
-        "target",
-        "coverage_95ci",
-        "p_below",
-        "mean_set_size",
-        "abstention_rate",
-        "mean_ess",
-        "theory",
-    ]
-    title = f"Synthetic conformal validity checks ({n_trials} trials, seed {seed})"
-    csv_path, md_path = write_table(
-        df, reports / "tables" / "conformal_synthetic", markdown_columns=columns, title=title
-    )
     run_dir = create_run_dir(reports, "simulate")
-    write_table(df, run_dir / "conformal_synthetic", markdown_columns=columns, title=title)
     config = {"simulate": {"n_trials": n_trials, "alpha": alpha, "seed": seed}}
     write_run_metadata(run_dir, config, seeds=[seed], extra={"command": "simulate"})
-    log.info("Wrote %s, %s and run folder %s", csv_path, md_path, run_dir)
+    md_path = write_simulation_tables(df, reports, n_trials, seed, run_dir=run_dir)
+    log.info("Wrote %s and run folder %s", md_path, run_dir)
     typer.echo(md_path.read_text(encoding="utf-8"))
+    return run_dir
 
 
 @app.command("all")
-def run_all(config: ConfigOption = DEFAULT_EXPERIMENT, overrides: OverrideOption = None) -> None:
-    """Run download, features, experiments and report in sequence."""
-    _not_ready("all", 7)
+def run_all(
+    config: ConfigOption = DEFAULT_EXPERIMENT,
+    overrides: OverrideOption = None,
+    n_jobs: Annotated[int | None, typer.Option(help="Parallel jobs (-1 = all).")] = None,
+    sensitivity: Annotated[
+        bool, typer.Option(help="Also run the alpha = 0.2 and ROI-exclusion analyses.")
+    ] = False,
+    simulate_trials: Annotated[
+        int, typer.Option(help="Trials per synthetic validity check.")
+    ] = 4000,
+) -> None:
+    """Run the whole pipeline, write the run manifest and the report.
+
+    download -> features -> synthetic checks -> baselines -> ComBat refit -> conformal ->
+    site effect -> detection -> manifest -> ``<reports>/RESULTS.md`` (plus, with
+    --sensitivity, alpha = 0.2 and ROI-level exclusion). Synthetic configs skip download
+    and features. The repository's docs/RESULTS.md and README are only refreshed by an
+    explicit ``shiftguard report``.
+    """
+    from shiftguard.config import load_config
+    from shiftguard.evaluation import report as rep
+    from shiftguard.utils.paths import reports_dir
+
+    base = list(overrides or [])
+    cfg = load_config(config, base)
+    reports = reports_dir(cfg)
+    jobs = 1 if n_jobs is None else n_jobs
+    abide = cfg.get("data", {}).get("source", "abide") != "synthetic"
+    name = cfg["experiment"]["name"]
+    combat_ovr = [
+        "features.harmonization=combat",
+        "experiment.protocols=[loso]",
+        "experiment.models=[logreg]",
+        f"experiment.name={name}_combat",
+        "experiment.report_tag=combat",
+    ]
+    runs: dict[str, str] = {}
+    if abide:
+        download(config, base)
+        features(config, base)
+    runs["simulate"] = simulate(n_trials=simulate_trials, reports=reports).name
+    b = run(config, base, n_jobs)
+    c = run(config, base + combat_ovr, n_jobs)
+    runs["baseline"], runs["baseline_combat"] = b.name, c.name
+    conf = conformal(b, c, n_jobs=jobs)
+    runs["conformal"] = conf.name
+    if sensitivity:
+        runs["conformal_alpha0p2"] = conformal(b, c, n_jobs=jobs, alpha=0.2).name
+        if abide:
+            drop_ovr = [
+                "qc.zero_variance_policy=drop_rois",
+                "experiment.protocols=[loso]",
+                "experiment.models=[logreg]",
+                f"experiment.name={name}_droprois",
+                "experiment.report_tag=droprois",
+            ]
+            features(config, base + drop_ovr)
+            d = run(config, base + drop_ovr, n_jobs)
+            runs["baseline_droprois"] = d.name
+            runs["conformal_droprois"] = conformal(d, n_jobs=jobs).name
+    runs["site_effect"] = site_effect(config, base).name
+    runs["detection"] = detect(conf).name
+    rep.save_manifest(reports / rep.MANIFEST, runs)
+    typer.echo(f"Wrote {reports / rep.MANIFEST}")
+    # never touches docs/ or the README: run `shiftguard report` for that
+    report(config, base, results=reports / "RESULTS.md", readme=None)
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -415,10 +415,24 @@ such.
 - **Paired bootstrap** between each method and split CP (same model): sites resampled
   with replacement (2000 resamples), statistics = mean site coverage, mean shortfall
   $\max(0, 1-\alpha-\text{coverage})$ and abstention; 95% percentile interval, two-sided
-  bootstrap p-value, BH across comparisons within a model.
+  bootstrap p-value, BH across comparisons within a model. This is the **primary**
+  analysis: the site is the unit of deployment and of shift.
+- **Two-stage (hierarchical) paired bootstrap** (secondary sensitivity analysis):
+  1. draw sites with replacement;
+  2. for every drawn site, independently also for repeated draws, draw its subjects with
+     replacement;
+  3. compute each method's site mean from the subjects' seed-averaged outcomes;
+  4. take the statistic (the same three as above) as the mean over drawn sites.
+
+  This also carries the binomial noise of each site's estimate, so its intervals are
+  wider. Its p-values get their own BH correction. A plain subject-level bootstrap is
+  deliberately not used: it would ignore the between-site variation that the study is
+  about.
 - **Empirical-Bayes beta-binomial**: $k_s \sim \mathrm{Bin}(n_s, \theta_s)$,
-  $\theta_s \sim \mathrm{Beta}(a, b)$, $(a, b)$ by maximum marginal likelihood; reported as
-  the between-site SD of true coverage, $\sqrt{ab/((a+b)^2(a+b+1))}$.
+  $\theta_s \sim \mathrm{Beta}(a, b)$, $(a, b)$ by maximum marginal likelihood. Reported as
+  the between-site SD of true coverage, $\sqrt{ab/((a+b)^2(a+b+1))}$, and as each site's
+  posterior mean $(a + k_s)/(a + b + n_s)$ next to the raw estimate (`coverage_eb` in
+  the per-site table).
 - Caveat: given one calibration set, conformal coverage is itself random (Beta
   distributed), so a per-site binomial test at $1-\alpha$ is approximate.
 

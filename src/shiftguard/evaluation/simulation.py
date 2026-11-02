@@ -371,3 +371,52 @@ def run_all_simulations(
             )
     report.results.extend(simulate_covariate_shift(n_trials=n_trials, alpha=alpha, seed=seed))
     return report
+
+
+SIMULATION_COLUMNS = [
+    "experiment",
+    "method",
+    "score",
+    "n_classes",
+    "n_calibration",
+    "target",
+    "coverage_95ci",
+    "p_below",
+    "mean_set_size",
+    "abstention_rate",
+    "mean_ess",
+    "theory",
+]
+
+
+def write_simulation_tables(
+    df: pd.DataFrame, reports: Any, n_trials: int, seed: int, run_dir: Any = None
+) -> Any:
+    """Write ``reports/tables/conformal_synthetic`` (and a copy in ``run_dir``)."""
+    from pathlib import Path
+
+    from shiftguard.utils.tables import write_table
+
+    df = df.copy()
+    if "coverage_95ci" not in df:
+        df["coverage_95ci"] = [
+            f"{c:.3f} [{lo:.3f}, {hi:.3f}]"
+            for c, lo, hi in zip(df.coverage, df.ci_low, df.ci_high, strict=True)
+        ]
+        df["p_below"] = [f"{p:.2g}" for p in df.p_below_target]
+    title = f"Synthetic conformal validity checks ({n_trials} trials, seed {seed})"
+    if run_dir is not None:
+        title += f"; run {Path(run_dir).name}"
+        write_table(
+            df,
+            Path(run_dir) / "conformal_synthetic",
+            markdown_columns=SIMULATION_COLUMNS,
+            title=title,
+        )
+    _, md_path = write_table(
+        df,
+        Path(reports) / "tables" / "conformal_synthetic",
+        markdown_columns=SIMULATION_COLUMNS,
+        title=title,
+    )
+    return md_path

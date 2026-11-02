@@ -111,6 +111,29 @@ Generated per site in [`reports/tables/cohort_summary.md`](../reports/tables/coh
 - **Mostly cognitively able participants:** median FIQ 108 (missing for 62 subjects, all
   of LEUVEN_2 and 23 of 28 at SBL). Low-IQ autistic people are under-represented.
 - **Case/control ratio varies by site,** from 37.9% ASD (SDSU) to 64.8% ASD (USM). So a
-  "site shift" also includes label shift, which weighted CP does not correct.
+  "site shift" can include label (prior) shift. Phase 5 measured how much of each site's
+  miscalibration this explains: about a third of the summed squared offsets. Only USM
+  (and UM_2) look like a prior shift; the large offsets at KKI, LEUVEN_1 and PITT do not
+  ([prevalence_shift.md](../reports/tables/prevalence_shift.md)).
 - Sites also differ in scanner, protocol, eyes-open/closed instructions and diagnostic
   procedure. This *site effect* is what the study is about, not a nuisance to hide.
+
+## Site effect in the features
+
+Described in [site_effect.md](../reports/tables/site_effect.md) and
+[Figure 2](../reports/figures/fig2_site_effect.png). On the 944 QC'd subjects:
+
+- The acquisition site can be predicted from the connectome with 5-fold balanced
+  accuracy 0.55, against a chance level of 0.06.
+- Site explains 13% of the variance of the 10 leading principal components (12% beyond
+  age, sex and diagnosis).
+- After ComBat (age and sex preserved, diagnosis not used), both are at chance level:
+  balanced accuracy 0.05 and R² 0.005.
+
+## Use in this project
+
+- Only the derived ROI time series and phenotypes are used. No images are downloaded.
+- Subject-level data, features and predictions stay in `data/` and `reports/runs/`,
+  which are git-ignored. Only site-level aggregates are committed.
+- The data support a methods benchmark, not a clinical model (see
+  [MODEL_CARD.md](MODEL_CARD.md)).

@@ -34,7 +34,10 @@ between-site SD of the true coverage.
 Paired comparisons
 ------------------
 Methods are compared on the same deployment sites with a paired bootstrap that
-resamples sites (the unit of deployment) with replacement.
+resamples sites (the unit of deployment) with replacement (primary). A two-stage
+(hierarchical) paired bootstrap, which resamples sites and then subjects within each
+drawn site, is a secondary sensitivity analysis: it adds the within-site sampling noise
+of each site's estimate.
 """
 
 from __future__ import annotations
@@ -162,6 +165,57 @@ def paired_bootstrap(
     p = 2.0 * min(np.mean(diffs <= 0), np.mean(diffs >= 0))
     return {
         "diff": float(statistic(a) - statistic(b)),
+        "ci_low": float(np.quantile(diffs, tail)),
+        "ci_high": float(np.quantile(diffs, 1 - tail)),
+        "p_value": float(min(1.0, p)),
+    }
+
+
+def two_stage_paired_bootstrap(
+    groups_x: list[ArrayLike],
+    groups_y: list[ArrayLike],
+    transform: Callable[[NDArray[np.float64]], NDArray[np.float64]] | None = None,
+    *,
+    n_boot: int = 2000,
+    level: float = 0.95,
+    seed: int = 0,
+) -> dict[str, float]:
+    """Two-stage (hierarchical) paired bootstrap: sites, then subjects within sites.
+
+    ``groups_x[s]`` and ``groups_y[s]`` hold paired per-subject values of site ``s``
+    (e.g. seed-averaged coverage indicators of two methods). Each replicate draws sites
+    with replacement and then, independently for every drawn site (also for repeated
+    draws of the same site), its subjects with replacement. The statistic is the mean
+    over drawn sites of ``transform(site mean of x) - transform(site mean of y)``
+    (``transform`` = identity, or e.g. the shortfall ``max(0, target - coverage)``).
+    Unlike the site-level bootstrap, the interval also carries the within-site sampling
+    noise of each site's estimate. Returns the observed statistic, a percentile interval
+    and a two-sided p-value as :func:`paired_bootstrap`.
+    """
+    xs = [np.asarray(g, dtype=np.float64) for g in groups_x]
+    ys = [np.asarray(g, dtype=np.float64) for g in groups_y]
+    if len(xs) != len(ys) or len(xs) < 2:
+        raise ValueError("need at least two paired sites")
+    if any(a.shape != b.shape or a.ndim != 1 or a.size < 1 for a, b in zip(xs, ys, strict=True)):
+        raise ValueError("every site needs paired 1-D subject values")
+    f = (lambda v: v) if transform is None else transform
+    n_sites = len(xs)
+    rng = np.random.default_rng(seed)
+    site_idx = rng.integers(0, n_sites, size=(n_boot, n_sites))
+    total = np.zeros(n_boot)
+    for s in range(n_sites):
+        rep, _ = np.nonzero(site_idx == s)  # replicate of every draw of site s
+        if rep.size == 0:
+            continue
+        sub = rng.integers(0, xs[s].size, size=(rep.size, xs[s].size))
+        contrib = f(xs[s][sub].mean(axis=1)) - f(ys[s][sub].mean(axis=1))
+        np.add.at(total, rep, contrib)
+    diffs = total / n_sites
+    observed = float(np.mean([f(np.mean(a)) - f(np.mean(b)) for a, b in zip(xs, ys, strict=True)]))
+    tail = (1.0 - level) / 2.0
+    p = 2.0 * min(np.mean(diffs <= 0), np.mean(diffs >= 0))
+    return {
+        "diff": observed,
         "ci_low": float(np.quantile(diffs, tail)),
         "ci_high": float(np.quantile(diffs, 1 - tail)),
         "p_value": float(min(1.0, p)),

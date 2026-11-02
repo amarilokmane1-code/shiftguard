@@ -60,6 +60,9 @@ def test_comparisons_and_offset_gap():
     comp = cs.comparisons_vs_split(ps, out, 0.1, n_boot=200).set_index("metric")
     assert comp.loc["coverage", "diff"] == pytest.approx(0.2)
     assert comp.loc["shortfall", "diff"] == pytest.approx(-0.1)
+    # secondary two-stage bootstrap columns, with their own BH q-values
+    assert {"ci_low_2stage", "ci_high_2stage", "p_2stage", "q_2stage"} <= set(comp.columns)
+    assert comp.loc["coverage", "ci_low_2stage"] <= 0.2 <= comp.loc["coverage", "ci_high_2stage"]
     # offsets that favour ASD where positive -> strong positive correlation
     gaps = {s: (0.9 + d, 0.9 - d) for s, d in zip("ABCDEF", np.linspace(-0.1, 0.1, 6), strict=True)}
     sites = cs.site_table(cs.per_seed_site(_outcomes(gaps)), 0.1)

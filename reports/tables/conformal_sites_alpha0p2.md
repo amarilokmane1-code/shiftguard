@@ -1,4 +1,4 @@
-# LOSO coverage per deployment site and per class (ASD, TDC), mean over seeds; run 2026-11-02_132458_conformal; baseline 2026-11-01_223647_loso; ComBat 2026-11-02_101130_loso_combat. Brackets: Clopper-Pearson 95% CI on the seed-averaged count. * = BH q < 0.05 for coverage below target. coverage_eb = empirical-Bayes beta-binomial estimate (shrunk towards the across-site mean, most for small sites). selective_accuracy = accuracy on non-abstained cases.
+# LOSO coverage per deployment site and per class (ASD, TDC), mean over seeds; run 2026-11-02_155702_conformal; baseline 2026-11-01_223647_loso; ComBat 2026-11-02_101130_loso_combat. Brackets: Clopper-Pearson 95% CI on the seed-averaged count. * = BH q < 0.05 for coverage below target. coverage_eb = empirical-Bayes beta-binomial estimate (shrunk towards the across-site mean, most for small sites). selective_accuracy = accuracy on non-abstained cases.
 
 | model | method | test_site | n | coverage_ci | coverage_eb_fmt | coverage_asd_fmt | coverage_tdc_fmt | abstention_fmt | selective_accuracy_fmt |
 |---|---|---|---|---|---|---|---|---|---|

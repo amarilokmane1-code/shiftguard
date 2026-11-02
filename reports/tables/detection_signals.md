@@ -1,4 +1,4 @@
-# Label-free signals per deployment site (logistic regression, no harmonisation, mean over seeds; run 2026-11-02_150802_detection; conformal 2026-11-02_130158_conformal). No-shift reference (within-site folds): ks_prob 0.102, ks_maxprob 0.096, abs_confidence_shift 0.009, abstention 0.593, abs_abstention_shift 0.043, abs_mean_p_shift 0.023, abs_em_shift 0.088, mean_p_shift -0.015, em_shift -0.073.
+# Label-free signals per deployment site (logistic regression, no harmonisation, mean over seeds; run 2026-11-02_155331_detection; conformal 2026-11-02_155103_conformal). No-shift reference (within-site folds): ks_prob 0.102, ks_maxprob 0.096, abs_confidence_shift 0.009, abstention 0.593, abs_abstention_shift 0.043, abs_mean_p_shift 0.023, abs_em_shift 0.088, mean_p_shift -0.015, em_shift -0.073.
 
 | test_site | n | coverage | coverage_drop | worst_class_drop | domain_auc | ks_prob | ks_maxprob | abs_confidence_shift | abstention | abs_abstention_shift | abs_mean_p_shift | abs_em_shift | mean_p_shift | em_shift |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|

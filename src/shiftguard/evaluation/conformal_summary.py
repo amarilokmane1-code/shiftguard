@@ -17,7 +17,9 @@ Per-site inference
 Between methods
     Paired bootstrap over sites (2000 resamples) of the difference to split CP in mean
     site coverage, mean shortfall ``max(0, 1 - alpha - coverage)`` and abstention, with
-    BH across comparisons. Mondrian arms are compared with split CP on the same subjects.
+    BH across comparisons (primary). Secondary: a two-stage paired bootstrap that also
+    resamples subjects within each drawn site (columns ``*_2stage``). Mondrian arms are
+    compared with split CP on the same subjects.
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ from shiftguard.evaluation.statistics import (
     binomial_test_below,
     clopper_pearson,
     paired_bootstrap,
+    two_stage_paired_bootstrap,
 )
 
 GROUP = ["protocol", "model", "method"]
@@ -216,34 +219,85 @@ def _site_vectors(
     return a.loc[common], b.loc[common]
 
 
+def _subject_groups(
+    outcomes: pd.DataFrame, model: str, method: str
+) -> dict[str, tuple[list[np.ndarray], list[np.ndarray]]]:
+    """Per-site, per-subject paired values (method, split CP), averaged over seeds.
+
+    Returns ``{"cov": (method groups, split groups), "abst": (...)}`` with one array per
+    site, subjects in the same order in both. Mondrian arms are paired with split CP on
+    the subjects and seeds they were evaluated on.
+    """
+    o = outcomes[(outcomes["protocol"] == "loso") & (outcomes["model"] == model)]
+    keys = ["seed", "test_site", "SUB_ID"]
+    m = o[o["method"] == method]
+    split = o[o["method"] == "split"].merge(m[keys], on=keys)
+
+    def per_subject(x: pd.DataFrame) -> pd.DataFrame:
+        x = x.assign(
+            cov=np.where(x["label"] == 1, x["in1"], x["in0"]).astype(float),
+            abst=((x["in0"] + x["in1"]) != 1).astype(float),
+        )
+        return x.groupby(["test_site", "SUB_ID"])[["cov", "abst"]].mean()
+
+    both = per_subject(m).join(per_subject(split), lsuffix="_m", rsuffix="_s", how="inner")
+    out: dict[str, tuple[list[np.ndarray], list[np.ndarray]]] = {"cov": ([], []), "abst": ([], [])}
+    for _, g in both.groupby(level="test_site", sort=True):
+        for k in ("cov", "abst"):
+            out[k][0].append(g[f"{k}_m"].to_numpy())
+            out[k][1].append(g[f"{k}_s"].to_numpy())
+    return out
+
+
 def comparisons_vs_split(
     per_seed: pd.DataFrame,
     outcomes: pd.DataFrame,
     alpha: float,
     n_boot: int = 2000,
     seed: int = 0,
+    two_stage: bool = True,
 ) -> pd.DataFrame:
-    """Paired site bootstrap of every LOSO method against split CP (same model)."""
+    """Paired site bootstrap of every LOSO method against split CP (same model).
+
+    With ``two_stage``, the two-stage (sites, then subjects) bootstrap is added as a
+    secondary analysis, with its own BH q-values within model.
+    """
     rows = []
     loso = per_seed[per_seed["protocol"] == "loso"]
+    target = 1.0 - alpha
+
+    def shortfall(v: np.ndarray) -> np.ndarray:
+        return np.maximum(0.0, target - v)
+
     for (model, method), _ in loso.groupby(["model", "method"], sort=False):
         if method == "split":
             continue
         a, b = _site_vectors(per_seed, outcomes, model, method, alpha)
-        for metric, col in (
-            ("coverage", "cov"),
-            ("shortfall", "shortfall"),
-            ("abstention", "abst"),
+        groups = _subject_groups(outcomes, model, method) if two_stage else None
+        for metric, col, key, transform in (
+            ("coverage", "cov", "cov", None),
+            ("shortfall", "shortfall", "cov", shortfall),
+            ("abstention", "abst", "abst", None),
         ):
             res = paired_bootstrap(a[col], b[col], n_boot=n_boot, seed=seed)
-            rows.append(
-                {"model": model, "method": method, "metric": metric, "n_sites": len(a)} | res
-            )
+            row = {"model": model, "method": method, "metric": metric, "n_sites": len(a)} | res
+            if groups is not None:
+                gx, gy = groups[key]
+                two = two_stage_paired_bootstrap(gx, gy, transform, n_boot=n_boot, seed=seed)
+                row |= {
+                    "ci_low_2stage": two["ci_low"],
+                    "ci_high_2stage": two["ci_high"],
+                    "p_2stage": two["p_value"],
+                }
+            rows.append(row)
     tab = pd.DataFrame(rows)
     if len(tab):
-        tab["q_value"] = np.nan
-        for _, idx in tab.groupby("model").groups.items():
-            tab.loc[idx, "q_value"] = benjamini_hochberg(tab.loc[idx, "p_value"])
+        for p_col, q_col in (("p_value", "q_value"), ("p_2stage", "q_2stage")):
+            if p_col not in tab:
+                continue
+            tab[q_col] = np.nan
+            for _, idx in tab.groupby("model").groups.items():
+                tab.loc[idx, q_col] = benjamini_hochberg(tab.loc[idx, p_col])
     return tab
 
 

@@ -41,7 +41,11 @@ def test_data_stages_fail_cleanly_without_data_or_network(stage, tmp_path):
     assert result.exit_code == 3, result.output
 
 
-@pytest.mark.parametrize("stage", ["report", "all"])
-def test_unimplemented_stages_fail_loudly(stage):
-    result = runner.invoke(app, [stage])
-    assert result.exit_code == 2
+def test_report_without_manifest_fails_cleanly(tmp_path):
+    # never run `report` or `all` against the real reports folder in tests: `all` runs the
+    # whole pipeline (it is tested on synthetic data in test_report.py)
+    result = runner.invoke(
+        app,
+        ["report", "-s", f"paths.reports_dir={tmp_path.as_posix()}", "--readme", "none.md"],
+    )
+    assert result.exit_code == 3, result.output

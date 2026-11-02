@@ -23,6 +23,7 @@ The diagnosis enters this *description* only; it is never a ComBat covariate.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -127,3 +128,96 @@ def describe_site_effect(
         per_component=comp,
         embedding=emb,
     )
+
+
+def effects_table(effects: dict[str, SiteEffect], n_subjects: int) -> pd.DataFrame:
+    """One summary row per harmonisation setting."""
+    return pd.DataFrame(
+        [
+            {
+                "harmonization": name,
+                "n_subjects": n_subjects,
+                "n_sites": round(1.0 / e.chance),
+                "site_balanced_accuracy": e.site_balanced_accuracy,
+                "chance": e.chance,
+                "r2_site": e.r2_site,
+                "r2_site_partial": e.r2_site_partial,
+            }
+            for name, e in effects.items()
+        ]
+    )
+
+
+def save_site_effect(run_dir: Path, effects: dict[str, SiteEffect], sites: NDArray) -> None:
+    """Store everything Figure 2 and the table need in the run folder."""
+    run_dir = Path(run_dir)
+    effects_table(effects, len(sites)).to_csv(
+        run_dir / "site_effect.csv", index=False, lineterminator="\n"
+    )
+    pd.concat(
+        [e.per_component.assign(harmonization=n) for n, e in effects.items()], ignore_index=True
+    ).to_csv(run_dir / "site_effect_components.csv", index=False, lineterminator="\n")
+    pd.concat(
+        [
+            pd.DataFrame(
+                {
+                    "harmonization": n,
+                    "site": sites,
+                    "pc1": e.embedding[:, 0],
+                    "pc2": e.embedding[:, 1],
+                }
+            )
+            for n, e in effects.items()
+        ],
+        ignore_index=True,
+    ).to_csv(run_dir / "site_effect_embedding.csv.gz", index=False, lineterminator="\n")
+
+
+def load_site_effect(run_dir: Path) -> tuple[dict[str, SiteEffect], NDArray]:
+    """Rebuild the :class:`SiteEffect` objects saved by :func:`save_site_effect`."""
+    run_dir = Path(run_dir)
+    tab = pd.read_csv(run_dir / "site_effect.csv").set_index("harmonization")
+    comps = pd.read_csv(run_dir / "site_effect_components.csv")
+    emb = pd.read_csv(run_dir / "site_effect_embedding.csv.gz", dtype={"site": str})
+    effects, sites = {}, None
+    for name, row in tab.iterrows():
+        e = emb[emb["harmonization"] == name]
+        sites = e["site"].to_numpy(dtype=object)
+        effects[str(name)] = SiteEffect(
+            site_balanced_accuracy=float(row["site_balanced_accuracy"]),
+            chance=float(row["chance"]),
+            r2_site=float(row["r2_site"]),
+            r2_site_partial=float(row["r2_site_partial"]),
+            per_component=comps[comps["harmonization"] == name]
+            .drop(columns="harmonization")
+            .reset_index(drop=True),
+            embedding=e[["pc1", "pc2"]].to_numpy(),
+        )
+    return effects, sites
+
+
+def write_site_effect_outputs(
+    effects: dict[str, SiteEffect], sites: NDArray, run_name: str, reports: Path, tag: str = ""
+) -> pd.DataFrame:
+    """Write ``reports/tables/site_effect`` and Figure 2."""
+    from shiftguard.utils.tables import write_table
+    from shiftguard.viz.site_effect_figure import figure_site_effect
+
+    reports = Path(reports)
+    sfx = f"_{tag}" if tag else ""
+    table = effects_table(effects, len(sites))
+    write_table(
+        table,
+        reports / "tables" / f"site_effect{sfx}",
+        title=(
+            f"Site effect on the connectome (run {run_name}). Site balanced accuracy: "
+            "5-fold CV (scaler, PCA 50, multinomial L2 logistic regression), chance = "
+            "1 / sites. r2_site: R^2 of site dummies on the 10 leading principal components, "
+            "weighted by explained variance; r2_site_partial: beyond age, sex and diagnosis. "
+            "ComBat uses age and sex only."
+        ),
+    )
+    figure_site_effect(
+        effects["none"], effects["combat"], sites, reports / "figures" / f"fig2_site_effect{sfx}"
+    )
+    return table

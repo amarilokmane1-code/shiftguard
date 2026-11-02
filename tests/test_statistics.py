@@ -75,3 +75,39 @@ def test_paired_bootstrap():
     assert res["ci_low"] > 0 and res["p_value"] < 0.01
     same = paired_bootstrap(base + rng.normal(scale=0.01, size=18), base, n_boot=1000)
     assert same["ci_low"] < 0 < same["ci_high"]
+
+
+def test_two_stage_bootstrap_adds_within_site_noise():
+    from shiftguard.evaluation.statistics import paired_bootstrap, two_stage_paired_bootstrap
+
+    rng = np.random.default_rng(0)
+    site_effect = rng.normal(0.05, 0.02, size=12)
+    # no within-site noise: subjects of a site all equal -> same as the site bootstrap
+    flat_x = [np.full(30, 0.9 + d) for d in site_effect]
+    flat_y = [np.full(30, 0.9) for _ in site_effect]
+    two = two_stage_paired_bootstrap(flat_x, flat_y, n_boot=1000, seed=1)
+    one = paired_bootstrap(0.9 + site_effect, np.full(12, 0.9), n_boot=1000, seed=1)
+    assert two["diff"] == pytest.approx(one["diff"])
+    assert two["ci_high"] - two["ci_low"] == pytest.approx(one["ci_high"] - one["ci_low"], rel=0.2)
+    # binary subject outcomes: the two-stage interval is wider
+    noisy_x = [rng.binomial(1, 0.9, size=30).astype(float) for _ in site_effect]
+    noisy_y = [rng.binomial(1, 0.85, size=30).astype(float) for _ in site_effect]
+    site_means = (np.array([x.mean() for x in noisy_x]), np.array([y.mean() for y in noisy_y]))
+    w1 = paired_bootstrap(*site_means, n_boot=1000, seed=2)
+    w2 = two_stage_paired_bootstrap(noisy_x, noisy_y, n_boot=1000, seed=2)
+    assert w2["diff"] == pytest.approx(w1["diff"])
+    assert (w2["ci_high"] - w2["ci_low"]) > (w1["ci_high"] - w1["ci_low"])
+
+
+def test_two_stage_bootstrap_transform_and_errors():
+    from shiftguard.evaluation.statistics import two_stage_paired_bootstrap
+
+    x = [np.array([1.0, 1.0, 0.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
+    y = [np.array([0.0, 1.0, 0.0, 1.0]), np.array([1.0, 1.0, 1.0, 0.0])]
+    short = two_stage_paired_bootstrap(x, y, lambda v: np.maximum(0.0, 0.9 - v), n_boot=200)
+    # shortfalls: x (0.15, 0), y (0.4, 0.15) -> mean difference -0.2
+    assert short["diff"] == pytest.approx(-0.2)
+    with pytest.raises(ValueError):
+        two_stage_paired_bootstrap([np.ones(3)], [np.ones(3)])
+    with pytest.raises(ValueError):
+        two_stage_paired_bootstrap([np.ones(3), np.ones(2)], [np.ones(3), np.ones(3)])

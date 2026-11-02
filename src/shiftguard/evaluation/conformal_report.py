@@ -220,14 +220,23 @@ def write_outputs(
         for d, lo, hi in zip(c["diff"], c["ci_low"], c["ci_high"], strict=True)
     ]
     c["q"] = _fmt(c["q_value"])
+    cols = ["model", "method", "metric", "n_sites", "difference", "q"]
+    if "ci_low_2stage" in c:
+        c["two_stage_ci"] = [
+            f"[{lo:+.3f}, {hi:+.3f}]"
+            for lo, hi in zip(c["ci_low_2stage"], c["ci_high_2stage"], strict=True)
+        ]
+        c["q_two_stage"] = _fmt(c["q_2stage"])
+        cols += ["two_stage_ci", "q_two_stage"]
     write_table(
         c,
         tables / f"conformal_comparisons{sfx}",
-        markdown_columns=["model", "method", "metric", "n_sites", "difference", "q"],
+        markdown_columns=cols,
         title=(
             f"Method minus split CP (LOSO), paired bootstrap over sites ({n_boot} resamples), "
-            f"95% percentile CI, BH q-values within model; {src}. Mondrian arms are compared "
-            "with split CP on the same subjects."
+            f"95% percentile CI, BH q-values within model (primary); {src}. Secondary: "
+            "two-stage bootstrap (sites, then subjects within each drawn site), its 95% CI "
+            "and BH q. Mondrian arms are compared with split CP on the same subjects."
         ),
     )
     # prevalence diagnostic

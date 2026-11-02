@@ -1,0 +1,10 @@
+# Run folders (reports/runs/) that the final tables, figures and RESULTS.md come from.
+simulate: 2026-11-01_175354_simulate
+baseline: 2026-11-01_223647_loso
+baseline_combat: 2026-11-02_101130_loso_combat
+baseline_droprois: 2026-11-02_105846_loso_droprois
+conformal: 2026-11-02_155103_conformal
+conformal_alpha0p2: 2026-11-02_155702_conformal
+conformal_droprois: 2026-11-02_155801_conformal
+site_effect: 2026-11-02_155829_site_effect
+detection: 2026-11-02_155331_detection

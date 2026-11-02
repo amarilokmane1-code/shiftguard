@@ -1,88 +1,88 @@
-# Method minus split CP (LOSO), paired bootstrap over sites (2000 resamples), 95% percentile CI, BH q-values within model; run 2026-11-02_130158_conformal; baseline 2026-11-01_223647_loso; ComBat 2026-11-02_101130_loso_combat. Mondrian arms are compared with split CP on the same subjects.
+# Method minus split CP (LOSO), paired bootstrap over sites (2000 resamples), 95% percentile CI, BH q-values within model (primary); run 2026-11-02_155103_conformal; baseline 2026-11-01_223647_loso; ComBat 2026-11-02_101130_loso_combat. Secondary: two-stage bootstrap (sites, then subjects within each drawn site), its 95% CI and BH q. Mondrian arms are compared with split CP on the same subjects.
 
-| model | method | metric | n_sites | difference | q |
-|---|---|---|---|---|---|
-| logreg | class_conditional | coverage | 18 | +0.004 [-0.002, +0.009] | 0.221 |
-| logreg | class_conditional | shortfall | 18 | -0.001 [-0.007, +0.004] | 0.671 |
-| logreg | class_conditional | abstention | 18 | +0.008 [-0.001, +0.017] | 0.097 |
-| logreg | class_conditional_aps | coverage | 18 | +0.013 [+0.001, +0.026] | 0.045 |
-| logreg | class_conditional_aps | shortfall | 18 | -0.013 [-0.024, -0.004] | 0.012 |
-| logreg | class_conditional_aps | abstention | 18 | +0.127 [+0.102, +0.154] | 0.000 |
-| logreg | combat+class_conditional | coverage | 18 | +0.026 [+0.005, +0.048] | 0.033 |
-| logreg | combat+class_conditional | shortfall | 18 | -0.019 [-0.037, -0.002] | 0.040 |
-| logreg | combat+class_conditional | abstention | 18 | +0.052 [+0.010, +0.099] | 0.021 |
-| logreg | combat+split | coverage | 18 | +0.021 [+0.000, +0.043] | 0.054 |
-| logreg | combat+split | shortfall | 18 | -0.017 [-0.035, -0.002] | 0.045 |
-| logreg | combat+split | abstention | 18 | +0.031 [-0.005, +0.074] | 0.119 |
-| logreg | combat+weighted | coverage | 18 | +0.022 [+0.002, +0.044] | 0.045 |
-| logreg | combat+weighted | shortfall | 18 | -0.016 [-0.031, -0.002] | 0.040 |
-| logreg | combat+weighted | abstention | 18 | +0.039 [+0.002, +0.081] | 0.054 |
-| logreg | combat+weighted_clip | coverage | 18 | +0.022 [+0.001, +0.043] | 0.045 |
-| logreg | combat+weighted_clip | shortfall | 18 | -0.016 [-0.031, -0.002] | 0.040 |
-| logreg | combat+weighted_clip | abstention | 18 | +0.038 [+0.001, +0.080] | 0.054 |
-| logreg | label_shift_em | coverage | 18 | -0.188 [-0.257, -0.121] | 0.000 |
-| logreg | label_shift_em | shortfall | 18 | +0.178 [+0.113, +0.247] | 0.000 |
-| logreg | label_shift_em | abstention | 18 | -0.237 [-0.313, -0.162] | 0.000 |
-| logreg | label_shift_oracle | coverage | 18 | +0.004 [-0.014, +0.022] | 0.671 |
-| logreg | label_shift_oracle | shortfall | 18 | -0.001 [-0.013, +0.010] | 0.814 |
-| logreg | label_shift_oracle | abstention | 18 | -0.004 [-0.030, +0.024] | 0.797 |
-| logreg | mondrian_k0 | coverage | 18 | +0.127 [+0.096, +0.161] | 0.000 |
-| logreg | mondrian_k0 | shortfall | 18 | -0.041 [-0.070, -0.017] | 0.000 |
-| logreg | mondrian_k0 | abstention | 18 | +0.490 [+0.451, +0.534] | 0.000 |
-| logreg | mondrian_k10 | coverage | 18 | +0.028 [+0.002, +0.054] | 0.045 |
-| logreg | mondrian_k10 | shortfall | 18 | -0.019 [-0.041, +0.002] | 0.105 |
-| logreg | mondrian_k10 | abstention | 18 | +0.112 [+0.052, +0.173] | 0.000 |
-| logreg | mondrian_k20 | coverage | 18 | +0.033 [+0.009, +0.059] | 0.010 |
-| logreg | mondrian_k20 | shortfall | 18 | -0.032 [-0.056, -0.010] | 0.000 |
-| logreg | mondrian_k20 | abstention | 18 | +0.091 [+0.031, +0.156] | 0.004 |
-| logreg | mondrian_k5 | coverage | 18 | +0.127 [+0.096, +0.161] | 0.000 |
-| logreg | mondrian_k5 | shortfall | 18 | -0.041 [-0.070, -0.017] | 0.000 |
-| logreg | mondrian_k5 | abstention | 18 | +0.490 [+0.451, +0.534] | 0.000 |
-| logreg | split_aps | coverage | 18 | +0.010 [-0.004, +0.023] | 0.171 |
-| logreg | split_aps | shortfall | 18 | -0.011 [-0.022, -0.002] | 0.033 |
-| logreg | split_aps | abstention | 18 | +0.110 [+0.086, +0.133] | 0.000 |
-| logreg | split_aps_det | coverage | 18 | +0.119 [+0.096, +0.144] | 0.000 |
-| logreg | split_aps_det | shortfall | 18 | -0.031 [-0.052, -0.013] | 0.000 |
-| logreg | split_aps_det | abstention | 18 | +0.477 [+0.437, +0.522] | 0.000 |
-| logreg | weighted | coverage | 18 | +0.060 [+0.028, +0.093] | 0.000 |
-| logreg | weighted | shortfall | 18 | -0.023 [-0.044, -0.004] | 0.026 |
-| logreg | weighted | abstention | 18 | +0.299 [+0.220, +0.379] | 0.000 |
-| logreg | weighted_clip | coverage | 18 | +0.079 [+0.052, +0.106] | 0.000 |
-| logreg | weighted_clip | shortfall | 18 | -0.030 [-0.051, -0.013] | 0.000 |
-| logreg | weighted_clip | abstention | 18 | +0.316 [+0.251, +0.387] | 0.000 |
-| mlp | class_conditional | coverage | 18 | +0.001 [-0.005, +0.008] | 0.756 |
-| mlp | class_conditional | shortfall | 18 | +0.001 [-0.003, +0.006] | 0.756 |
-| mlp | class_conditional | abstention | 18 | +0.002 [-0.010, +0.014] | 0.840 |
-| mlp | class_conditional_aps | coverage | 18 | -0.002 [-0.015, +0.011] | 0.796 |
-| mlp | class_conditional_aps | shortfall | 18 | -0.006 [-0.015, +0.001] | 0.183 |
-| mlp | class_conditional_aps | abstention | 18 | +0.073 [+0.048, +0.100] | 0.000 |
-| mlp | label_shift_em | coverage | 18 | -0.245 [-0.299, -0.193] | 0.000 |
-| mlp | label_shift_em | shortfall | 18 | +0.232 [+0.180, +0.286] | 0.000 |
-| mlp | label_shift_em | abstention | 18 | -0.347 [-0.422, -0.271] | 0.000 |
-| mlp | label_shift_oracle | coverage | 18 | +0.005 [-0.010, +0.019] | 0.577 |
-| mlp | label_shift_oracle | shortfall | 18 | +0.001 [-0.011, +0.013] | 0.945 |
-| mlp | label_shift_oracle | abstention | 18 | +0.002 [-0.022, +0.026] | 0.840 |
-| mlp | mondrian_k0 | coverage | 18 | +0.112 [+0.084, +0.146] | 0.000 |
-| mlp | mondrian_k0 | shortfall | 18 | -0.030 [-0.058, -0.009] | 0.000 |
-| mlp | mondrian_k0 | abstention | 18 | +0.407 [+0.376, +0.440] | 0.000 |
-| mlp | mondrian_k10 | coverage | 18 | +0.026 [+0.002, +0.058] | 0.039 |
-| mlp | mondrian_k10 | shortfall | 18 | -0.024 [-0.053, -0.003] | 0.015 |
-| mlp | mondrian_k10 | abstention | 18 | +0.078 [+0.037, +0.126] | 0.000 |
-| mlp | mondrian_k20 | coverage | 18 | +0.014 [-0.008, +0.039] | 0.345 |
-| mlp | mondrian_k20 | shortfall | 18 | -0.017 [-0.040, +0.001] | 0.114 |
-| mlp | mondrian_k20 | abstention | 18 | +0.044 [-0.002, +0.095] | 0.092 |
-| mlp | mondrian_k5 | coverage | 18 | +0.112 [+0.084, +0.146] | 0.000 |
-| mlp | mondrian_k5 | shortfall | 18 | -0.030 [-0.058, -0.009] | 0.000 |
-| mlp | mondrian_k5 | abstention | 18 | +0.407 [+0.376, +0.440] | 0.000 |
-| mlp | split_aps | coverage | 18 | -0.003 [-0.015, +0.010] | 0.756 |
-| mlp | split_aps | shortfall | 18 | -0.005 [-0.014, +0.003] | 0.379 |
-| mlp | split_aps | abstention | 18 | +0.065 [+0.040, +0.092] | 0.000 |
-| mlp | split_aps_det | coverage | 18 | +0.110 [+0.089, +0.136] | 0.000 |
-| mlp | split_aps_det | shortfall | 18 | -0.023 [-0.044, -0.007] | 0.000 |
-| mlp | split_aps_det | abstention | 18 | +0.399 [+0.368, +0.432] | 0.000 |
-| mlp | weighted | coverage | 18 | +0.046 [+0.017, +0.075] | 0.007 |
-| mlp | weighted | shortfall | 18 | -0.013 [-0.029, +0.002] | 0.138 |
-| mlp | weighted | abstention | 18 | +0.219 [+0.150, +0.286] | 0.000 |
-| mlp | weighted_clip | coverage | 18 | +0.065 [+0.044, +0.087] | 0.000 |
-| mlp | weighted_clip | shortfall | 18 | -0.020 [-0.035, -0.007] | 0.000 |
-| mlp | weighted_clip | abstention | 18 | +0.237 [+0.180, +0.295] | 0.000 |
+| model | method | metric | n_sites | difference | q | two_stage_ci | q_two_stage |
+|---|---|---|---|---|---|---|---|
+| logreg | class_conditional | coverage | 18 | +0.004 [-0.002, +0.009] | 0.221 | [-0.004, +0.011] | 0.356 |
+| logreg | class_conditional | shortfall | 18 | -0.001 [-0.007, +0.004] | 0.671 | [-0.009, +0.004] | 0.539 |
+| logreg | class_conditional | abstention | 18 | +0.008 [-0.001, +0.017] | 0.097 | [-0.003, +0.020] | 0.205 |
+| logreg | class_conditional_aps | coverage | 18 | +0.013 [+0.001, +0.026] | 0.045 | [-0.004, +0.032] | 0.151 |
+| logreg | class_conditional_aps | shortfall | 18 | -0.013 [-0.024, -0.004] | 0.012 | [-0.031, -0.003] | 0.041 |
+| logreg | class_conditional_aps | abstention | 18 | +0.127 [+0.102, +0.154] | 0.000 | [+0.092, +0.162] | 0.000 |
+| logreg | combat+class_conditional | coverage | 18 | +0.026 [+0.005, +0.048] | 0.033 | [+0.002, +0.052] | 0.066 |
+| logreg | combat+class_conditional | shortfall | 18 | -0.019 [-0.037, -0.002] | 0.040 | [-0.040, -0.001] | 0.069 |
+| logreg | combat+class_conditional | abstention | 18 | +0.052 [+0.010, +0.099] | 0.021 | [+0.007, +0.102] | 0.041 |
+| logreg | combat+split | coverage | 18 | +0.021 [+0.000, +0.043] | 0.054 | [-0.002, +0.046] | 0.086 |
+| logreg | combat+split | shortfall | 18 | -0.017 [-0.035, -0.002] | 0.045 | [-0.038, +0.000] | 0.076 |
+| logreg | combat+split | abstention | 18 | +0.031 [-0.005, +0.074] | 0.119 | [-0.009, +0.077] | 0.162 |
+| logreg | combat+weighted | coverage | 18 | +0.022 [+0.002, +0.044] | 0.045 | [-0.000, +0.047] | 0.076 |
+| logreg | combat+weighted | shortfall | 18 | -0.016 [-0.031, -0.002] | 0.040 | [-0.035, -0.000] | 0.076 |
+| logreg | combat+weighted | abstention | 18 | +0.039 [+0.002, +0.081] | 0.054 | [-0.003, +0.084] | 0.086 |
+| logreg | combat+weighted_clip | coverage | 18 | +0.022 [+0.001, +0.043] | 0.045 | [-0.001, +0.047] | 0.078 |
+| logreg | combat+weighted_clip | shortfall | 18 | -0.016 [-0.031, -0.002] | 0.040 | [-0.035, +0.000] | 0.076 |
+| logreg | combat+weighted_clip | abstention | 18 | +0.038 [+0.001, +0.080] | 0.054 | [-0.002, +0.084] | 0.090 |
+| logreg | label_shift_em | coverage | 18 | -0.188 [-0.257, -0.121] | 0.000 | [-0.263, -0.118] | 0.000 |
+| logreg | label_shift_em | shortfall | 18 | +0.178 [+0.113, +0.247] | 0.000 | [+0.104, +0.249] | 0.000 |
+| logreg | label_shift_em | abstention | 18 | -0.237 [-0.313, -0.162] | 0.000 | [-0.318, -0.155] | 0.000 |
+| logreg | label_shift_oracle | coverage | 18 | +0.004 [-0.014, +0.022] | 0.671 | [-0.017, +0.023] | 0.715 |
+| logreg | label_shift_oracle | shortfall | 18 | -0.001 [-0.013, +0.010] | 0.814 | [-0.015, +0.013] | 0.785 |
+| logreg | label_shift_oracle | abstention | 18 | -0.004 [-0.030, +0.024] | 0.797 | [-0.033, +0.026] | 0.834 |
+| logreg | mondrian_k0 | coverage | 18 | +0.127 [+0.096, +0.161] | 0.000 | [+0.087, +0.151] | 0.000 |
+| logreg | mondrian_k0 | shortfall | 18 | -0.041 [-0.070, -0.017] | 0.000 | [-0.063, -0.014] | 0.000 |
+| logreg | mondrian_k0 | abstention | 18 | +0.490 [+0.451, +0.534] | 0.000 | [+0.430, +0.535] | 0.000 |
+| logreg | mondrian_k10 | coverage | 18 | +0.028 [+0.002, +0.054] | 0.045 | [+0.000, +0.057] | 0.076 |
+| logreg | mondrian_k10 | shortfall | 18 | -0.019 [-0.041, +0.002] | 0.105 | [-0.042, +0.002] | 0.091 |
+| logreg | mondrian_k10 | abstention | 18 | +0.112 [+0.052, +0.173] | 0.000 | [+0.038, +0.176] | 0.002 |
+| logreg | mondrian_k20 | coverage | 18 | +0.033 [+0.009, +0.059] | 0.010 | [+0.005, +0.056] | 0.020 |
+| logreg | mondrian_k20 | shortfall | 18 | -0.032 [-0.056, -0.010] | 0.000 | [-0.046, -0.006] | 0.014 |
+| logreg | mondrian_k20 | abstention | 18 | +0.091 [+0.031, +0.156] | 0.004 | [+0.017, +0.160] | 0.025 |
+| logreg | mondrian_k5 | coverage | 18 | +0.127 [+0.096, +0.161] | 0.000 | [+0.087, +0.151] | 0.000 |
+| logreg | mondrian_k5 | shortfall | 18 | -0.041 [-0.070, -0.017] | 0.000 | [-0.063, -0.014] | 0.000 |
+| logreg | mondrian_k5 | abstention | 18 | +0.490 [+0.451, +0.534] | 0.000 | [+0.430, +0.535] | 0.000 |
+| logreg | split_aps | coverage | 18 | +0.010 [-0.004, +0.023] | 0.171 | [-0.009, +0.028] | 0.320 |
+| logreg | split_aps | shortfall | 18 | -0.011 [-0.022, -0.002] | 0.033 | [-0.029, +0.000] | 0.076 |
+| logreg | split_aps | abstention | 18 | +0.110 [+0.086, +0.133] | 0.000 | [+0.078, +0.141] | 0.000 |
+| logreg | split_aps_det | coverage | 18 | +0.119 [+0.096, +0.144] | 0.000 | [+0.091, +0.154] | 0.000 |
+| logreg | split_aps_det | shortfall | 18 | -0.031 [-0.052, -0.013] | 0.000 | [-0.065, -0.014] | 0.000 |
+| logreg | split_aps_det | abstention | 18 | +0.477 [+0.437, +0.522] | 0.000 | [+0.429, +0.529] | 0.000 |
+| logreg | weighted | coverage | 18 | +0.060 [+0.028, +0.093] | 0.000 | [+0.026, +0.097] | 0.000 |
+| logreg | weighted | shortfall | 18 | -0.023 [-0.044, -0.004] | 0.026 | [-0.053, -0.004] | 0.034 |
+| logreg | weighted | abstention | 18 | +0.299 [+0.220, +0.379] | 0.000 | [+0.216, +0.386] | 0.000 |
+| logreg | weighted_clip | coverage | 18 | +0.079 [+0.052, +0.106] | 0.000 | [+0.049, +0.113] | 0.000 |
+| logreg | weighted_clip | shortfall | 18 | -0.030 [-0.051, -0.013] | 0.000 | [-0.061, -0.013] | 0.000 |
+| logreg | weighted_clip | abstention | 18 | +0.316 [+0.251, +0.387] | 0.000 | [+0.246, +0.388] | 0.000 |
+| mlp | class_conditional | coverage | 18 | +0.001 [-0.005, +0.008] | 0.756 | [-0.006, +0.009] | 0.852 |
+| mlp | class_conditional | shortfall | 18 | +0.001 [-0.003, +0.006] | 0.756 | [-0.005, +0.008] | 0.852 |
+| mlp | class_conditional | abstention | 18 | +0.002 [-0.010, +0.014] | 0.840 | [-0.012, +0.016] | 0.860 |
+| mlp | class_conditional_aps | coverage | 18 | -0.002 [-0.015, +0.011] | 0.796 | [-0.018, +0.014] | 0.852 |
+| mlp | class_conditional_aps | shortfall | 18 | -0.006 [-0.015, +0.001] | 0.183 | [-0.020, +0.004] | 0.345 |
+| mlp | class_conditional_aps | abstention | 18 | +0.073 [+0.048, +0.100] | 0.000 | [+0.044, +0.106] | 0.000 |
+| mlp | label_shift_em | coverage | 18 | -0.245 [-0.299, -0.193] | 0.000 | [-0.303, -0.188] | 0.000 |
+| mlp | label_shift_em | shortfall | 18 | +0.232 [+0.180, +0.286] | 0.000 | [+0.172, +0.289] | 0.000 |
+| mlp | label_shift_em | abstention | 18 | -0.347 [-0.422, -0.271] | 0.000 | [-0.425, -0.271] | 0.000 |
+| mlp | label_shift_oracle | coverage | 18 | +0.005 [-0.010, +0.019] | 0.577 | [-0.012, +0.020] | 0.634 |
+| mlp | label_shift_oracle | shortfall | 18 | +0.001 [-0.011, +0.013] | 0.945 | [-0.013, +0.013] | 0.882 |
+| mlp | label_shift_oracle | abstention | 18 | +0.002 [-0.022, +0.026] | 0.840 | [-0.024, +0.027] | 0.860 |
+| mlp | mondrian_k0 | coverage | 18 | +0.112 [+0.084, +0.146] | 0.000 | [+0.076, +0.144] | 0.000 |
+| mlp | mondrian_k0 | shortfall | 18 | -0.030 [-0.058, -0.009] | 0.000 | [-0.060, -0.009] | 0.000 |
+| mlp | mondrian_k0 | abstention | 18 | +0.407 [+0.376, +0.440] | 0.000 | [+0.365, +0.449] | 0.000 |
+| mlp | mondrian_k10 | coverage | 18 | +0.026 [+0.002, +0.058] | 0.039 | [-0.001, +0.055] | 0.105 |
+| mlp | mondrian_k10 | shortfall | 18 | -0.024 [-0.053, -0.003] | 0.015 | [-0.048, -0.001] | 0.051 |
+| mlp | mondrian_k10 | abstention | 18 | +0.078 [+0.037, +0.126] | 0.000 | [+0.029, +0.122] | 0.002 |
+| mlp | mondrian_k20 | coverage | 18 | +0.014 [-0.008, +0.039] | 0.345 | [-0.011, +0.038] | 0.521 |
+| mlp | mondrian_k20 | shortfall | 18 | -0.017 [-0.040, +0.001] | 0.114 | [-0.037, +0.004] | 0.272 |
+| mlp | mondrian_k20 | abstention | 18 | +0.044 [-0.002, +0.095] | 0.092 | [-0.003, +0.095] | 0.105 |
+| mlp | mondrian_k5 | coverage | 18 | +0.112 [+0.084, +0.146] | 0.000 | [+0.076, +0.144] | 0.000 |
+| mlp | mondrian_k5 | shortfall | 18 | -0.030 [-0.058, -0.009] | 0.000 | [-0.060, -0.009] | 0.000 |
+| mlp | mondrian_k5 | abstention | 18 | +0.407 [+0.376, +0.440] | 0.000 | [+0.365, +0.449] | 0.000 |
+| mlp | split_aps | coverage | 18 | -0.003 [-0.015, +0.010] | 0.756 | [-0.018, +0.013] | 0.852 |
+| mlp | split_aps | shortfall | 18 | -0.005 [-0.014, +0.003] | 0.379 | [-0.018, +0.005] | 0.412 |
+| mlp | split_aps | abstention | 18 | +0.065 [+0.040, +0.092] | 0.000 | [+0.035, +0.097] | 0.000 |
+| mlp | split_aps_det | coverage | 18 | +0.110 [+0.089, +0.136] | 0.000 | [+0.085, +0.142] | 0.000 |
+| mlp | split_aps_det | shortfall | 18 | -0.023 [-0.044, -0.007] | 0.000 | [-0.054, -0.008] | 0.000 |
+| mlp | split_aps_det | abstention | 18 | +0.399 [+0.368, +0.432] | 0.000 | [+0.361, +0.438] | 0.000 |
+| mlp | weighted | coverage | 18 | +0.046 [+0.017, +0.075] | 0.007 | [+0.015, +0.078] | 0.013 |
+| mlp | weighted | shortfall | 18 | -0.013 [-0.029, +0.002] | 0.138 | [-0.037, +0.001] | 0.128 |
+| mlp | weighted | abstention | 18 | +0.219 [+0.150, +0.286] | 0.000 | [+0.147, +0.291] | 0.000 |
+| mlp | weighted_clip | coverage | 18 | +0.065 [+0.044, +0.087] | 0.000 | [+0.041, +0.092] | 0.000 |
+| mlp | weighted_clip | shortfall | 18 | -0.020 [-0.035, -0.007] | 0.000 | [-0.043, -0.007] | 0.000 |
+| mlp | weighted_clip | abstention | 18 | +0.237 [+0.180, +0.295] | 0.000 | [+0.178, +0.299] | 0.000 |

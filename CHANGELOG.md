@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Phase 7: report and documentation.
+  - `shiftguard report` rebuilds every table and figure from the run folders listed in
+    `reports/final_runs.yaml`, from saved predictions and outcomes, without refitting.
+    It then writes `docs/RESULTS.md` from the CSV tables, with a provenance table of run
+    folders and git commits, and refreshes the README key-results block between
+    markers. No number in RESULTS.md or that block is typed by hand.
+  - `shiftguard all` runs the whole pipeline (optionally `--sensitivity`) and writes the
+    manifest and `<reports>/RESULTS.md`. It never touches `docs/` or the README.
+  - Commands return their run folders; table and figure writers moved next to their
+    analyses (`write_detection_outputs`, `save/load/write_site_effect`,
+    `write_simulation_tables`). The site-effect run also saves its 2-D embedding, so
+    Figure 2 can be redrawn.
+- Two-stage (hierarchical) paired bootstrap as a secondary sensitivity analysis: sites,
+  then subjects within each drawn site, with its own BH q-values (`*_2stage` columns).
+  The site-level bootstrap stays primary. ComBat's shortfall gain is not significant
+  under it (q = 0.076); the EM label-shift failure and the Mondrian (k = 20) gain are.
+- MODEL_CARD completed (models, data, protocol, performance, failure modes, subgroups,
+  recommendations; the optional GNN is stated as not implemented). DATA_CARD gained the
+  site-effect description and the measured share of prior shift. README restructured.
+
 - Phase 6: label-free shift detection (`shiftguard detect <conformal run>`,
   `evaluation/detection.py`). Eight signals per deployment site, computed from features
   and predictions only (a permutation test checks they ignore deployment labels):
@@ -120,3 +140,11 @@ All notable changes to this project are documented here. The format follows
 ### Fixed
 - `.gitignore` now anchors `/data/` (previously also ignored `src/shiftguard/data/` and
   `configs/data/`).
+- README quoted q = 0.043 for ComBat's shortfall gain from an earlier run; with the
+  ComBat + weighted arms in the BH family, the final value is 0.045.
+- Stale comment in `configs/model/calibration.yaml` (the calibration split is halved
+  since phase 5).
+- `tests/test_cli.py` invoked `report` and `all` with the default config to check the
+  old "not implemented" exit code. Once implemented, that would run the real pipeline
+  inside the test suite. The test now checks `report` against an empty temporary
+  folder, and `all` is tested on synthetic data only.

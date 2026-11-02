@@ -122,6 +122,8 @@ def within_site_reference(diag: pd.DataFrame, model: str) -> dict[str, float]:
 
 
 def _resid(r: np.ndarray, z: np.ndarray) -> np.ndarray:
+    if np.ptp(z) == 0:  # constant covariate (e.g. equal site sizes): nothing to remove
+        return r - r.mean()
     return r - np.polyval(np.polyfit(z, r, 1), z)
 
 
@@ -220,3 +222,83 @@ def correlation_table(
             ok = tab.loc[idx, p_col].notna().to_numpy()
             tab.loc[idx[ok], q_col] = benjamini_hochberg(tab.loc[idx[ok], p_col])
     return tab
+
+
+def write_detection_outputs(
+    site_sig: pd.DataFrame,
+    corr: pd.DataFrame,
+    reference: dict[str, dict[str, float]],
+    config: dict[str, Any],
+    run_name: str,
+    conformal_name: str,
+    reports: Any,
+) -> None:
+    """Write the phase 6 tables (``reports/tables``) and Figures 7 and 7b."""
+    from pathlib import Path
+
+    from shiftguard.utils.tables import write_table
+    from shiftguard.viz.detection_figures import figure_class_gap, figure_detection
+
+    reports = Path(reports)
+    n_boot = int(config["statistics"]["n_bootstrap"])
+    tag = config["experiment"].get("report_tag", "")
+    sfx = f"_{tag}" if tag else ""
+    src = f"run {run_name}; conformal {conformal_name}"
+    c = corr.copy()
+    c["rho_ci"] = [
+        f"{r:+.2f} [{lo:+.2f}, {hi:+.2f}]"
+        for r, lo, hi in zip(c["rho"], c["ci_low"], c["ci_high"], strict=True)
+    ]
+    c["rho_leave_one_site_out"] = [
+        f"{lo:+.2f} to {hi:+.2f}" for lo, hi in zip(c["rho_loo_min"], c["rho_loo_max"], strict=True)
+    ]
+    write_table(
+        c,
+        reports / "tables" / f"detection_correlations{sfx}",
+        markdown_columns=[
+            "model",
+            "variant",
+            "signal",
+            "target",
+            "n_sites",
+            "rho_ci",
+            "rho_leave_one_site_out",
+            "p_value",
+            "q_value",
+            "rho_partial",
+            "q_partial",
+        ],
+        title=(
+            f"Label-free signals vs real coverage per deployment site (LOSO; {src}). "
+            "Spearman rho across sites, 95% percentile bootstrap CI over sites "
+            f"({n_boot} resamples), range of rho when each site is left out in turn, "
+            "two-sided permutation p (10,000), BH q within each "
+            "(model, variant); rho_partial / q_partial: partial Spearman given site size "
+            "(number of deployment subjects), its own permutation p and BH. "
+            "Targets: coverage_drop = target - split-CP coverage; "
+            "worst_class_drop = target - min class coverage; class_gap = ASD - TDC coverage."
+        ),
+    )
+    primary = site_sig[(site_sig["model"] == "logreg") & (site_sig["variant"] == "none")]
+    write_table(
+        primary,
+        reports / "tables" / f"detection_signals{sfx}",
+        markdown_columns=[
+            "test_site",
+            "n",
+            "coverage",
+            "coverage_drop",
+            "worst_class_drop",
+            *UNSIGNED,
+            *SIGNED,
+        ],
+        title=(
+            f"Label-free signals per deployment site (logistic regression, no harmonisation, "
+            f"mean over seeds; {src}). No-shift reference (within-site folds): "
+            + ", ".join(f"{k} {v:.3f}" for k, v in reference.get("logreg", {}).items())
+            + "."
+        ),
+    )
+    figs = reports / "figures"
+    figure_detection(site_sig, corr, reference.get("logreg", {}), figs / f"fig7_detection{sfx}")
+    figure_class_gap(site_sig, corr, figs / f"fig7b_detection_class_gap{sfx}")
