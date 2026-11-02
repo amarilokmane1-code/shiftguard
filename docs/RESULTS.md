@@ -8,15 +8,15 @@
 
 | analysis | run folder | git commit | uncommitted changes |
 |---|---|---|---|
-| simulate | 2026-11-01_175354_simulate | 8553eb4 | yes |
-| baseline | 2026-11-01_223647_loso | bb8d23c | yes |
-| baseline_combat | 2026-11-02_101130_loso_combat | b77ea75 | yes |
-| baseline_droprois | 2026-11-02_105846_loso_droprois | b77ea75 | yes |
-| conformal | 2026-11-02_155103_conformal | 6ba90ea | yes |
-| conformal_alpha0p2 | 2026-11-02_155702_conformal | 6ba90ea | yes |
-| conformal_droprois | 2026-11-02_155801_conformal | 6ba90ea | yes |
-| site_effect | 2026-11-02_155829_site_effect | 6ba90ea | yes |
-| detection | 2026-11-02_155331_detection | 6ba90ea | yes |
+| simulate | 2026-11-01_175354_simulate | 75cbfc7 | yes |
+| baseline | 2026-11-01_223647_loso | 960035b | yes |
+| baseline_combat | 2026-11-02_101130_loso_combat | b8f8469 | yes |
+| baseline_droprois | 2026-11-02_105846_loso_droprois | b8f8469 | yes |
+| conformal | 2026-11-02_155103_conformal | c79e00a | yes |
+| conformal_alpha0p2 | 2026-11-02_155702_conformal | c79e00a | yes |
+| conformal_droprois | 2026-11-02_155801_conformal | c79e00a | yes |
+| site_effect | 2026-11-02_155829_site_effect | c79e00a | yes |
+| detection | 2026-11-02_155331_detection | c79e00a | yes |
 
 
 *Uncommitted changes* means code, configs or docs differed from the commit when the run started. Tables and figures under `reports/` rewritten by an earlier step of the same pipeline are outputs and do not count.

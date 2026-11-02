@@ -15,7 +15,7 @@ All notable changes to this project are documented here. The format follows
   (`viz.style.label_points`, `viz.style.spread_positions`, with tests).
 
 - Phase 9: reviewer pass.
-  - Clean-clone check of commit fde85f5 (fresh venv, CPU PyTorch,
+  - Clean-clone check of commit fcff268 (fresh venv, CPU PyTorch,
     `.[dev,harmonize]`): install 7.6 min; lint clean; 231 tests passed (96% coverage)
     with `SHIFTGUARD_OFFLINE=1`; synthetic `all --sensitivity` (199 s) and `report`
     succeeded; no tracked file changed.
@@ -169,6 +169,12 @@ All notable changes to this project are documented here. The format follows
   ruff + pytest + pre-commit, GitHub Actions CI (never downloads ABIDE), docs skeleton.
 
 ### Changed
+- Git history rewritten to remove a co-author trailer from every commit message. Files
+  and dates are unchanged (every commit keeps its exact tree), but all commit hashes
+  changed. The final runs' metadata and RESULTS.md now cite the new hashes; each run's
+  `metadata.json` keeps the old one in `git.commit_before_history_rewrite`. Hashes
+  cited in the docs, old → new: `8553eb4` → `75cbfc7`, `bb8d23c` → `960035b`,
+  `b77ea75` → `b8f8469`, `6ba90ea` → `c79e00a`, `fde85f5` → `fcff268`.
 - Config keys that the code never read were removed and their fixed behaviour
   documented in comments: `conformal.primary_score`, `scores`, `aps_randomized`,
   `methods`, `weighted.min_effective_sample_size`, `domain_classifier.pca_fit_on` and
