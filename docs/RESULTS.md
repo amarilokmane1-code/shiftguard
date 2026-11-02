@@ -19,6 +19,8 @@
 | detection | 2026-11-02_155331_detection | 6ba90ea | yes |
 
 
+*Uncommitted changes* means code, configs or docs differed from the commit when the run started. Tables and figures under `reports/` rewritten by an earlier step of the same pipeline are outputs and do not count.
+
 Runs marked *uncommitted changes* were made from a working tree with edits not yet committed (development of that phase); the code that produced them was committed at the end of the phase.
 
 ## Cohort
