@@ -232,3 +232,42 @@ def test_build_requires_download(fake_config):
         build_dataset(fake_config)
     with pytest.raises(FileNotFoundError, match="features"):
         load_dataset(fake_config)
+
+
+def test_drop_rois_policy_keeps_subjects_and_removes_constant_rois(fake_config, tmp_path):
+    from shiftguard.data.dataset import constant_rois
+    from shiftguard.data.timeseries import read_1d
+
+    pheno = make_phenotypes({"S1": (4, 4), "S2": (5, 3)})
+    write_fake_abide(tmp_path / "data", pheno, SPEC, n_rois=6)
+    # subject 0: ROI 2 constant; subject 3: ROIs 2 and 5 constant
+    for i, rois in ((0, [2]), (3, [2, 5])):
+        path = timeseries_path(tmp_path / "data", SPEC, pheno["FILE_ID"].iloc[i])
+        arr = read_1d(path)
+        arr[:, rois] = 1.0
+        header = "\t".join(f"#{j + 1}" for j in range(arr.shape[1]))
+        np.savetxt(path, arr, header=header, comments="")
+
+    strict = build_dataset(fake_config)
+    assert strict.reason_counts["bad_rois"] == 2
+    # S1 drops below 3 per class and is lost as a whole site (what happened to CMU)
+    assert strict.small_sites == ["S1"]
+    assert load_dataset(fake_config).features.shape == (8, 15)  # 6 ROIs -> 15 edges
+
+    fake_config["qc"]["zero_variance_policy"] = "drop_rois"
+    loose = build_dataset(fake_config)
+    assert "bad_rois" not in loose.reason_counts or loose.reason_counts["bad_rois"] == 0
+    assert derived_dir(fake_config).name.endswith("_droprois")
+    meta = json.loads((derived_dir(fake_config) / "qc_config.json").read_text())
+    assert meta["dropped_rois"] == [2, 5]
+    ds = load_dataset(fake_config)
+    assert ds.features.shape == (16, 6)  # 4 ROIs left -> 6 edges, nobody excluded
+    assert all(t.shape[1] == 4 for t in ds.time_series)
+    assert (tmp_path / "reports" / "qc_summary_droprois.csv").is_file()
+    assert (tmp_path / "reports" / "qc_summary.csv").is_file()  # main report untouched
+
+    rng = np.random.default_rng(0)
+    a, b = rng.normal(size=(20, 4)), rng.normal(size=(20, 4))
+    b[:, 1] = 0.0
+    assert constant_rois([a, b]).tolist() == [1]
+    assert constant_rois([]).size == 0

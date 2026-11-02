@@ -15,6 +15,16 @@ the *first* reason that applies, so the per-reason counts add up to the total ex
                                 The whole site is dropped (it could not be a meaningful
                                 deployment site, nor support calibration per class).
 
+Zero-variance policy
+--------------------
+``exclude_subjects`` (default, main analysis)
+    Rule 6 above: subjects with more than ``max_zero_variance_rois`` constant ROIs are
+    excluded.
+``drop_rois`` (sensitivity analysis)
+    Constant ROIs never exclude a subject. Instead, every ROI that is constant in any
+    subject of the final cohort is removed for **all** subjects (same feature set
+    everywhere); see :func:`shiftguard.data.dataset.build_dataset`.
+
 Rater rules (PCP manual QC fields)
 ----------------------------------
 ``none``
@@ -56,6 +66,9 @@ RATER_RULES: tuple[str, ...] = (
 )
 
 
+ZERO_VARIANCE_POLICIES: tuple[str, ...] = ("exclude_subjects", "drop_rois")
+
+
 @dataclass(frozen=True)
 class QCConfig:
     """QC parameters (see the module docstring)."""
@@ -64,11 +77,17 @@ class QCConfig:
     min_subjects_per_class_per_site: int = 10
     min_timepoints: int = 50
     max_zero_variance_rois: int = 0
+    zero_variance_policy: str = "exclude_subjects"
     covariates: tuple[str, ...] = ("AGE_AT_SCAN", "SEX")
 
     def __post_init__(self) -> None:
         if self.rater_rule not in RATER_RULES:
             raise ValueError(f"rater_rule must be one of {RATER_RULES}, got {self.rater_rule!r}")
+        if self.zero_variance_policy not in ZERO_VARIANCE_POLICIES:
+            raise ValueError(
+                f"zero_variance_policy must be one of {ZERO_VARIANCE_POLICIES}, "
+                f"got {self.zero_variance_policy!r}"
+            )
 
     @classmethod
     def from_config(
@@ -82,6 +101,7 @@ class QCConfig:
                 "min_subjects_per_class_per_site",
                 "min_timepoints",
                 "max_zero_variance_rois",
+                "zero_variance_policy",
             )
             if k in qc_cfg
         }
@@ -159,9 +179,9 @@ def apply_qc(pheno: pd.DataFrame, ts_info: pd.DataFrame, config: QCConfig) -> QC
     _flag(df[cov].isna().any(axis=1), "missing_covariates")
     _flag(~df["readable"], "missing_timeseries")
     _flag(df["n_timepoints"].fillna(0) < config.min_timepoints, "too_few_timepoints")
-    bad = df["has_nonfinite"].astype("boolean").fillna(False).astype(bool) | (
-        df["n_zero_variance_rois"].fillna(0) > config.max_zero_variance_rois
-    )
+    bad = df["has_nonfinite"].astype("boolean").fillna(False).astype(bool)
+    if config.zero_variance_policy == "exclude_subjects":
+        bad |= df["n_zero_variance_rois"].fillna(0) > config.max_zero_variance_rois
     _flag(bad, "bad_rois")
 
     remaining = reason.isna()

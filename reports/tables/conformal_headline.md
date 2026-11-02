@@ -1,0 +1,44 @@
+# Conformal prediction at alpha = 0.1 (target coverage 0.90); run 2026-11-02_130158_conformal; baseline 2026-11-01_223647_loso; ComBat 2026-11-02_101130_loso_combat. Coverage pooled over sites, mean over seeds. Site metrics use seed-averaged site coverage; coverage_gap = mean over sites of max(0, target - coverage); n_*_under = BH q < 0.05 for coverage < target; abstention = set is not a single class; selective_accuracy = accuracy on the non-abstained cases; between_site_sd = empirical-Bayes SD of true site coverage.
+
+| protocol | model | method | coverage | coverage_asd | coverage_tdc | mean_site_coverage | worst_site_coverage | worst_site | coverage_gap | worst_site_class_coverage | n_sites_under | n_site_classes_under | abstention | mean_set_size | selective_accuracy | between_site_sd |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| loso | logreg | class_conditional | 0.901 | 0.906 | 0.896 | 0.884 | 0.782 | LEUVEN_1 | 0.030 | 0.607 | 0.000 | 2.000 | 0.564 | 1.564 | 0.773 | 0.033 |
+| loso | logreg | class_conditional_aps | 0.903 | 0.904 | 0.903 | 0.894 | 0.818 | LEUVEN_1 | 0.018 | 0.679 | 0.000 | 0.000 | 0.671 | 1.669 | 0.710 | 0.002 |
+| loso | logreg | combat+class_conditional | 0.915 | 0.916 | 0.915 | 0.907 | 0.856 | UM_2 | 0.012 | 0.771 | 0.000 | 0.000 | 0.582 | 1.582 | 0.798 | 0.001 |
+| loso | logreg | combat+split | 0.910 | 0.898 | 0.921 | 0.902 | 0.856 | OHSU | 0.014 | 0.793 | 0.000 | 0.000 | 0.564 | 1.564 | 0.793 | 0.011 |
+| loso | logreg | combat+weighted | 0.911 | 0.897 | 0.924 | 0.902 | 0.839 | LEUVEN_1 | 0.015 | 0.757 | 0.000 | 0.000 | 0.571 | 1.571 | 0.793 | 0.008 |
+| loso | logreg | combat+weighted_clip | 0.911 | 0.898 | 0.923 | 0.902 | 0.843 | LEUVEN_1 | 0.015 | 0.764 | 0.000 | 0.000 | 0.571 | 1.571 | 0.793 | 0.008 |
+| loso | logreg | label_shift_em | 0.729 | 0.723 | 0.735 | 0.692 | 0.417 | KKI | 0.209 | 0.000 | 12.000 | 12.000 | 0.324 | 1.289 | 0.626 | 0.145 |
+| loso | logreg | label_shift_oracle | 0.902 | 0.883 | 0.919 | 0.884 | 0.768 | LEUVEN_1 | 0.030 | 0.586 | 0.000 | 2.000 | 0.548 | 1.548 | 0.782 | 0.021 |
+| loso | logreg | mondrian_k0 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | KKI | 0.000 | 1.000 | 0.000 | 0.000 | 1.000 | 2.000 | - | 0.000 |
+| loso | logreg | mondrian_k10 | 0.914 | 0.915 | 0.913 | 0.901 | 0.780 | OHSU | 0.022 | 0.643 | 0.000 | 0.000 | 0.627 | 1.618 | 0.782 | 0.027 |
+| loso | logreg | mondrian_k20 | 0.910 | 0.904 | 0.915 | 0.906 | 0.820 | OHSU | 0.010 | 0.741 | 0.000 | 0.000 | 0.579 | 1.579 | 0.788 | 0.002 |
+| loso | logreg | mondrian_k5 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | KKI | 0.000 | 1.000 | 0.000 | 0.000 | 1.000 | 2.000 | - | 0.000 |
+| loso | logreg | split | 0.898 | 0.887 | 0.908 | 0.881 | 0.750 | LEUVEN_1 | 0.031 | 0.550 | 0.000 | 0.000 | 0.554 | 1.554 | 0.771 | 0.030 |
+| loso | logreg | split_aps | 0.898 | 0.890 | 0.906 | 0.890 | 0.814 | LEUVEN_1 | 0.020 | 0.664 | 0.000 | 0.000 | 0.652 | 1.649 | 0.710 | 0.002 |
+| loso | logreg | split_aps_det | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | KKI | 0.000 | 1.000 | 0.000 | 0.000 | 1.000 | 2.000 | - | 0.000 |
+| loso | logreg | weighted | 0.939 | 0.937 | 0.940 | 0.941 | 0.831 | UM_1 | 0.008 | 0.781 | 0.000 | 0.000 | 0.831 | 1.800 | 0.733 | 0.047 |
+| loso | logreg | weighted_clip | 0.964 | 0.963 | 0.965 | 0.960 | 0.892 | OHSU | 0.001 | 0.869 | 0.000 | 0.000 | 0.858 | 1.857 | 0.752 | 0.019 |
+| loso | mlp | class_conditional | 0.905 | 0.908 | 0.901 | 0.891 | 0.744 | OHSU | 0.024 | 0.657 | 0.000 | 0.000 | 0.618 | 1.618 | 0.751 | 0.020 |
+| loso | mlp | class_conditional_aps | 0.895 | 0.901 | 0.890 | 0.887 | 0.796 | OHSU | 0.017 | 0.771 | 0.000 | 0.000 | 0.683 | 1.676 | 0.680 | 0.003 |
+| loso | mlp | label_shift_em | 0.668 | 0.690 | 0.647 | 0.644 | 0.412 | KKI | 0.256 | 0.000 | 18.000 | 19.000 | 0.285 | 1.220 | 0.582 | 0.092 |
+| loso | mlp | label_shift_oracle | 0.908 | 0.895 | 0.921 | 0.895 | 0.740 | OHSU | 0.024 | 0.536 | 0.000 | 0.000 | 0.616 | 1.616 | 0.762 | 0.011 |
+| loso | mlp | mondrian_k0 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | KKI | 0.000 | 1.000 | 0.000 | 0.000 | 1.000 | 2.000 | - | 0.000 |
+| loso | mlp | mondrian_k10 | 0.916 | 0.918 | 0.914 | 0.914 | 0.847 | STANFORD | 0.006 | 0.762 | 0.000 | 0.000 | 0.656 | 1.655 | 0.760 | 0.001 |
+| loso | mlp | mondrian_k20 | 0.896 | 0.898 | 0.895 | 0.902 | 0.838 | SBL | 0.013 | 0.676 | 0.000 | 0.000 | 0.592 | 1.592 | 0.746 | 0.002 |
+| loso | mlp | mondrian_k5 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | KKI | 0.000 | 1.000 | 0.000 | 0.000 | 1.000 | 2.000 | - | 0.000 |
+| loso | mlp | split | 0.902 | 0.896 | 0.908 | 0.890 | 0.740 | OHSU | 0.023 | 0.636 | 0.000 | 0.000 | 0.611 | 1.611 | 0.749 | 0.007 |
+| loso | mlp | split_aps | 0.894 | 0.896 | 0.893 | 0.887 | 0.796 | OHSU | 0.019 | 0.760 | 0.000 | 0.000 | 0.675 | 1.672 | 0.679 | 0.001 |
+| loso | mlp | split_aps_det | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | KKI | 0.000 | 1.000 | 0.000 | 0.000 | 1.000 | 2.000 | - | 0.000 |
+| loso | mlp | weighted | 0.939 | 0.940 | 0.938 | 0.936 | 0.820 | OHSU | 0.010 | 0.808 | 0.000 | 0.000 | 0.833 | 1.803 | 0.725 | 0.042 |
+| loso | mlp | weighted_clip | 0.961 | 0.962 | 0.961 | 0.955 | 0.844 | OHSU | 0.003 | 0.825 | 0.000 | 0.000 | 0.860 | 1.857 | 0.737 | 0.019 |
+| within_site | logreg | class_conditional | 0.910 | 0.900 | 0.919 | - | - | - | - | - | - | - | 0.613 | 1.613 | 0.781 | - |
+| within_site | logreg | class_conditional_aps | 0.914 | 0.920 | 0.908 | - | - | - | - | - | - | - | 0.689 | 1.689 | 0.726 | - |
+| within_site | logreg | split | 0.911 | 0.885 | 0.935 | - | - | - | - | - | - | - | 0.593 | 1.593 | 0.791 | - |
+| within_site | logreg | split_aps | 0.905 | 0.887 | 0.922 | - | - | - | - | - | - | - | 0.670 | 1.669 | 0.716 | - |
+| within_site | logreg | split_aps_det | 1.000 | 1.000 | 1.000 | - | - | - | - | - | - | - | 1.000 | 2.000 | - | - |
+| within_site | mlp | class_conditional | 0.915 | 0.901 | 0.927 | - | - | - | - | - | - | - | 0.648 | 1.648 | 0.763 | - |
+| within_site | mlp | class_conditional_aps | 0.897 | 0.884 | 0.908 | - | - | - | - | - | - | - | 0.690 | 1.677 | 0.692 | - |
+| within_site | mlp | split | 0.915 | 0.903 | 0.926 | - | - | - | - | - | - | - | 0.649 | 1.649 | 0.765 | - |
+| within_site | mlp | split_aps | 0.905 | 0.907 | 0.903 | - | - | - | - | - | - | - | 0.706 | 1.701 | 0.686 | - |
+| within_site | mlp | split_aps_det | 1.000 | 1.000 | 1.000 | - | - | - | - | - | - | - | 1.000 | 2.000 | - | - |

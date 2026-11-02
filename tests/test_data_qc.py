@@ -134,3 +134,14 @@ def test_qc_config_validation():
     cfg = QCConfig.from_config({"rater_rule": "none", "min_timepoints": 10}, ["AGE_AT_SCAN"])
     assert cfg.rater_rule == "none" and cfg.min_timepoints == 10
     assert cfg.covariates == ("AGE_AT_SCAN",)
+
+
+def test_drop_rois_policy_never_excludes_for_constant_rois(tmp_path):
+    pheno = _load(tmp_path, make_phenotypes({"A": (3, 3)}))
+    info = _info(pheno)
+    info.loc[0, "n_zero_variance_rois"] = 40
+    info.loc[1, "has_nonfinite"] = True
+    cfg = QCConfig(min_subjects_per_class_per_site=1, zero_variance_policy="drop_rois")
+    assert apply_qc(pheno, info, cfg).reason_counts["bad_rois"] == 1  # non-finite only
+    with pytest.raises(ValueError, match="zero_variance_policy"):
+        QCConfig(zero_variance_policy="zero_fill")

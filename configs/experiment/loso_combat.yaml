@@ -1,0 +1,14 @@
+# LOSO baseline refit on ComBat-harmonised features (phase 5). Primary model only.
+# ComBat is fitted on all subjects without labels (covariates: age, sex), so it is
+# transductive for the deployment site; see src/shiftguard/features/harmonize.py.
+inherit:
+  - loso.yaml
+
+features:
+  harmonization: combat
+
+experiment:
+  name: loso_combat
+  protocols: [loso]
+  models: [logreg]
+  report_tag: combat

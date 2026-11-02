@@ -21,7 +21,12 @@ conformal prediction with abstention.
 
 Discrimination and calibration (phase 4): [baselines](../reports/tables/baselines.md)
 and [per-site LOSO results](../reports/tables/loso_sites.md), mean ± SD over 10 seeds.
-Coverage and abstention: TBD (phase 5).
+Coverage and abstention (phase 5): [headline](../reports/tables/conformal_headline.md)
+and [per deployment site and class](../reports/tables/conformal_sites.md). At α = 0.1,
+LOSO split CP (logistic regression) covers 0.898 of subjects pooled. Per site, coverage
+is 0.75–0.95, and per class at a site it falls to 0.55. More than half of subjects get
+both labels (abstention 0.554). Coverage at a new site is **not** guaranteed;
+see [LIMITATIONS](LIMITATIONS.md) §7–12.
 
 ## Subgroups and known biases
 

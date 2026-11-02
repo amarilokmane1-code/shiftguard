@@ -225,6 +225,9 @@ def write_baseline_outputs(
     from shiftguard.viz.figures import figure_reliability
 
     n_bins = config["calibration"]["n_bins"]
+    # experiment.report_tag keeps variant runs (e.g. ComBat) from overwriting the main tables
+    tag = config["experiment"].get("report_tag", "")
+    sfx = f"_{tag}" if tag else ""
     if save_raw:
         preds.to_csv(run_dir / "predictions.csv.gz", index=False, lineterminator="\n")
         info.to_csv(run_dir / "fold_info.csv", index=False, lineterminator="\n")
@@ -254,8 +257,8 @@ def write_baseline_outputs(
         "calibrated model with the same probabilities and test size; cal_in_large = mean "
         "P(ASD) minus observed ASD fraction."
     )
-    for out in (run_dir, reports / "tables"):
-        write_table(table, out / "baselines", markdown_columns=cols, title=title)
+    for out in (run_dir / "baselines", reports / "tables" / f"baselines{sfx}"):
+        write_table(table, out, markdown_columns=cols, title=title)
     sites = site_table(folds)
     if len(sites):
         site_cols = [
@@ -270,10 +273,10 @@ def write_baseline_outputs(
             "ece_null",
             "cal_in_large",
         ]
-        for out in (run_dir, reports / "tables"):
+        for out in (run_dir / "loso_sites", reports / "tables" / f"loso_sites{sfx}"):
             write_table(
                 sites,
-                out / "loso_sites",
+                out,
                 markdown_columns=site_cols,
                 digits=1,
                 title=(
@@ -281,7 +284,7 @@ def write_baseline_outputs(
                     "ece_null = size-matched ECE of a perfectly calibrated model."
                 ),
             )
-    figure_reliability(preds, reports / "figures" / "fig6_reliability", n_bins)
+    figure_reliability(preds, reports / "figures" / f"fig6_reliability{sfx}", n_bins)
     return table
 
 

@@ -41,9 +41,23 @@ from shiftguard.utils.tables import write_table
 log = get_logger(__name__)
 
 
+def variant_suffix(config: dict[str, Any]) -> str:
+    """``""`` for the main QC, ``"_droprois"`` for the ROI-exclusion sensitivity analysis."""
+    policy = config.get("qc", {}).get("zero_variance_policy", "exclude_subjects")
+    return "" if policy == "exclude_subjects" else "_droprois"
+
+
 def derived_dir(config: dict[str, Any]) -> Path:
-    """``<data_dir>/derived/<pipeline>_<strategy>_<derivative>``."""
-    return data_dir(config) / "derived" / AbideSpec.from_config(config["data"]).tag
+    """``<data_dir>/derived/<pipeline>_<strategy>_<derivative>[_droprois]``."""
+    tag = AbideSpec.from_config(config["data"]).tag
+    return data_dir(config) / "derived" / f"{tag}{variant_suffix(config)}"
+
+
+def constant_rois(ts: list[NDArray[np.float64]], atol: float = 1e-8) -> NDArray[np.intp]:
+    """Return the indices of ROIs that are constant in at least one time series."""
+    if not ts:
+        return np.array([], dtype=np.intp)
+    return np.flatnonzero(np.any([t.std(axis=0) <= atol for t in ts], axis=0))
 
 
 def _feature_file(kind: str) -> str:
@@ -80,6 +94,12 @@ def build_dataset(config: dict[str, Any]) -> QCResult:
     out.mkdir(parents=True, exist_ok=True)
     kept_ids = qc.included["FILE_ID"].tolist()
     kept_ts = {fid: ts[fid] for fid in kept_ids}
+    dropped: list[int] = []
+    if qc.config.zero_variance_policy == "drop_rois":
+        dropped = constant_rois(list(kept_ts.values())).tolist()  # type: ignore[arg-type]
+        keep = np.setdiff1d(np.arange(next(iter(kept_ts.values())).shape[1]), dropped)
+        kept_ts = {fid: t[:, keep] for fid, t in kept_ts.items()}  # type: ignore[index]
+        log.info("drop_rois: removing %d constant ROIs for every subject", len(dropped))
     qc.included.to_csv(out / "phenotypes_qc.csv", index=False, lineterminator="\n")
     qc.exclusions.to_csv(out / "exclusions.csv", index=False, lineterminator="\n")
     save_timeseries(out / "timeseries.npz", kept_ts)  # type: ignore[arg-type]
@@ -102,6 +122,7 @@ def build_dataset(config: dict[str, Any]) -> QCResult:
             {
                 "qc": vars(qc.config) | {"covariates": list(qc.config.covariates)},
                 "small_sites": qc.small_sites,
+                "dropped_rois": dropped,
             },
             indent=2,
         )
@@ -111,20 +132,21 @@ def build_dataset(config: dict[str, Any]) -> QCResult:
     )
     reports = reports_dir(config)
     reports.mkdir(parents=True, exist_ok=True)
+    sfx = variant_suffix(config)
     write_table(
         qc.summary,
-        reports / "qc_summary",
+        reports / f"qc_summary{sfx}",
         title=f"QC summary ({spec.tag}, rater rule: {qc.config.rater_rule})",
     )
     write_table(
         cohort_summary(qc.included),
-        reports / "tables" / "cohort_summary",
+        reports / "tables" / f"cohort_summary{sfx}",
         digits=1,
         title=f"Cohort after QC, per site ({spec.tag})",
     )
     figure_data_map(
         qc.summary,
-        reports / "figures" / "fig1_data_map",
+        reports / "figures" / f"fig1_data_map{sfx}",
         min_per_class=qc.config.min_subjects_per_class_per_site,
     )
     return qc

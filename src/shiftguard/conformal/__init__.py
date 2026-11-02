@@ -1,9 +1,10 @@
 """Conformal prediction implemented from scratch.
 
 Nonconformity scores, split conformal, class-conditional, Mondrian (group-conditional)
-and weighted conformal prediction for covariate shift.
+weighted conformal prediction for covariate shift and for label shift.
 """
 
+from shiftguard.conformal.label_shift import LabelShiftConformal
 from shiftguard.conformal.mondrian import MondrianConformal
 from shiftguard.conformal.quantiles import (
     conformal_quantile,
@@ -22,6 +23,7 @@ from shiftguard.conformal.weighted import (
 
 __all__ = [
     "ClassConditionalConformal",
+    "LabelShiftConformal",
     "MondrianConformal",
     "SplitConformal",
     "WeightedConformal",

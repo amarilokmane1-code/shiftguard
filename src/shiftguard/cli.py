@@ -4,6 +4,8 @@
 ``shiftguard features``  QC + functional-connectivity features
 ``shiftguard run``       run an experiment from a YAML config
 ``shiftguard summarize`` rebuild a run's tables from its saved predictions
+``shiftguard conformal`` conformal prediction under site shift (phase 5)
+``shiftguard site-effect`` site effect on the features before / after ComBat
 ``shiftguard report``    regenerate tables, figures and docs/RESULTS.md
 ``shiftguard all``       the whole pipeline
 """
@@ -182,6 +184,153 @@ def summarize(
     preds, info = pd.read_csv(needed[1]), pd.read_csv(needed[2])
     table = write_baseline_outputs(preds, info, cfg, run_dir, reports_dir(cfg), save_raw=False)
     typer.echo(table[["protocol", "model", "auc", "ece_cal", "ece_null"]].to_string(index=False))
+
+
+@app.command()
+def conformal(
+    baseline: Annotated[Path, typer.Argument(help="Baseline run folder (shiftguard run).")],
+    combat: Annotated[
+        Path | None, typer.Option(help="Baseline run refitted on ComBat features.")
+    ] = None,
+    n_jobs: Annotated[int, typer.Option(help="Parallel domain-classifier folds.")] = 1,
+    alpha: Annotated[
+        float | None,
+        typer.Option(help="Override the miscoverage level (sensitivity analysis)."),
+    ] = None,
+) -> None:
+    """Phase 5: conformal prediction under site shift, from saved baseline predictions.
+
+    With ``--alpha``, outputs carry an ``alpha<value>`` report tag (e.g. ``_alpha0p2``),
+    so a sensitivity run never overwrites the main tables and figures.
+    """
+    import pandas as pd
+
+    from shiftguard.config import load_config
+    from shiftguard.data.synthetic import load_any_dataset
+    from shiftguard.evaluation import conformal_report as rep
+    from shiftguard.evaluation.conformal_runner import load_run_predictions, run_conformal
+    from shiftguard.utils.paths import reports_dir
+    from shiftguard.utils.provenance import create_run_dir, write_run_metadata
+
+    try:
+        preds = load_run_predictions(baseline)
+        combat_preds = load_run_predictions(combat) if combat else None
+    except FileNotFoundError as exc:
+        log.error("%s", exc)
+        raise typer.Exit(code=3) from exc
+    cfg = load_config(baseline / "config.yaml")
+    if alpha is not None:
+        if not 0 < alpha < 1:
+            log.error("--alpha must be in (0, 1), got %s", alpha)
+            raise typer.Exit(code=2)
+        cfg["conformal"]["alpha"] = alpha
+        tag = cfg["experiment"].get("report_tag", "")
+        a_tag = "alpha" + f"{alpha:g}".replace(".", "p")
+        cfg["experiment"]["report_tag"] = f"{tag}_{a_tag}" if tag else a_tag
+    if combat_preds is not None:
+        rep.check_same_splits(preds, combat_preds, "ComBat run")
+    reports = reports_dir(cfg)
+    run_dir = create_run_dir(reports, "conformal")
+    setup_logging("INFO", log_file=run_dir / "run.log")
+    names = {"baseline": baseline.name, "combat": combat.name if combat else ""}
+    write_run_metadata(
+        run_dir,
+        cfg,
+        seeds=sorted(preds["seed"].unique().tolist()),
+        extra={"command": "conformal"} | names,
+    )
+    ds = load_any_dataset(cfg)  # raw features (never ComBat) for the domain classifier
+    weights, w_info = rep.domain_weights_cached(
+        ds, preds, cfg, reports / "cache" / f"domain_weights_{baseline.name}", n_jobs
+    )
+    w_info = w_info.assign(variant="none")
+    c_weights = None
+    if combat is not None and combat_preds is not None:
+        c_cfg = load_config(combat / "config.yaml")
+        c_ds = load_any_dataset(c_cfg)  # ComBat-harmonised features (no labels used)
+        c_weights, c_info = rep.domain_weights_cached(
+            c_ds, combat_preds, c_cfg, reports / "cache" / f"domain_weights_{combat.name}", n_jobs
+        )
+        w_info = pd.concat([w_info, c_info.assign(variant="combat")], ignore_index=True)
+    outcomes, diag = run_conformal(preds, cfg, weights, combat_preds, c_weights)
+    diag = diag.merge(w_info, on=["seed", "test_site", "variant"], how="left")
+    head = rep.write_outputs(outcomes, diag, cfg, run_dir, reports, names)
+    cols = ["protocol", "model", "method", "coverage", "worst_site_coverage", "abstention"]
+    typer.echo(head[[c for c in cols if c in head]].round(3).to_string(index=False))
+    typer.echo(f"Run folder: {run_dir}")
+
+
+@app.command("site-effect")
+def site_effect(
+    config: ConfigOption = DEFAULT_EXPERIMENT, overrides: OverrideOption = None
+) -> None:
+    """Describe the site effect on the features, before and after ComBat (Figure 2)."""
+    import copy
+
+    import pandas as pd
+
+    from shiftguard.config import load_config
+    from shiftguard.data.synthetic import load_any_dataset
+    from shiftguard.evaluation.site_effect import describe_site_effect
+    from shiftguard.features.harmonize import harmonize_dataset
+    from shiftguard.utils.paths import reports_dir
+    from shiftguard.utils.provenance import create_run_dir, write_run_metadata
+    from shiftguard.utils.tables import write_table
+    from shiftguard.viz.site_effect_figure import figure_site_effect
+
+    cfg = load_config(config, overrides)
+    cfg.setdefault("features", {})["harmonization"] = "none"
+    reports = reports_dir(cfg)
+    run_dir = create_run_dir(reports, "site_effect")
+    setup_logging("INFO", log_file=run_dir / "run.log")
+    seed = int(cfg["experiment"]["base_seed"])
+    write_run_metadata(run_dir, cfg, seeds=[seed], extra={"command": "site-effect"})
+    ds = load_any_dataset(cfg)
+    c_cfg = copy.deepcopy(cfg)
+    c_cfg["features"]["harmonization"] = "combat"
+    ds_c = harmonize_dataset(ds, c_cfg)  # age and sex only; never the diagnosis
+    cov = ds.phenotypes[["AGE_AT_SCAN", "SEX"]].assign(dx=ds.labels)
+    effects = {
+        name: describe_site_effect(d.features, ds.sites, cov, seed=seed)
+        for name, d in (("none", ds), ("combat", ds_c))
+    }
+    table = pd.DataFrame(
+        [
+            {
+                "harmonization": name,
+                "n_subjects": len(ds.labels),
+                "n_sites": len(set(ds.sites)),
+                "site_balanced_accuracy": e.site_balanced_accuracy,
+                "chance": e.chance,
+                "r2_site": e.r2_site,
+                "r2_site_partial": e.r2_site_partial,
+            }
+            for name, e in effects.items()
+        ]
+    )
+    comps = pd.concat(
+        [e.per_component.assign(harmonization=n) for n, e in effects.items()], ignore_index=True
+    )
+    table.to_csv(run_dir / "site_effect.csv", index=False, lineterminator="\n")
+    comps.to_csv(run_dir / "site_effect_components.csv", index=False, lineterminator="\n")
+    tag = cfg["experiment"].get("report_tag", "")
+    sfx = f"_{tag}" if tag else ""
+    write_table(
+        table,
+        reports / "tables" / f"site_effect{sfx}",
+        title=(
+            f"Site effect on the connectome (run {run_dir.name}). Site balanced accuracy: "
+            "5-fold CV (scaler, PCA 50, multinomial L2 logistic regression), chance = "
+            "1 / sites. r2_site: R^2 of site dummies on the 10 leading principal components, "
+            "weighted by explained variance; r2_site_partial: beyond age, sex and diagnosis. "
+            "ComBat uses age and sex only."
+        ),
+    )
+    figure_site_effect(
+        effects["none"], effects["combat"], ds.sites, reports / "figures" / f"fig2_site_effect{sfx}"
+    )
+    typer.echo(table.round(3).to_string(index=False))
+    typer.echo(f"Run folder: {run_dir}")
 
 
 @app.command()

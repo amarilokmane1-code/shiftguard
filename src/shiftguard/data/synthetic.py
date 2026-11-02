@@ -51,9 +51,16 @@ def make_synthetic_dataset(data_cfg: dict[str, Any], seed: int = 0) -> Dataset:
 
 
 def load_any_dataset(config: dict[str, Any]) -> Dataset:
-    """ABIDE (from the ``features`` cache) or the synthetic cohort, per ``data.source``."""
-    if config["data"].get("source") == "synthetic":
-        return make_synthetic_dataset(config["data"], seed=config["experiment"]["base_seed"])
-    from shiftguard.data.dataset import load_dataset
+    """ABIDE (from the ``features`` cache) or the synthetic cohort, per ``data.source``.
 
-    return load_dataset(config)
+    ``features.harmonization: combat`` applies label-free ComBat to the loaded features.
+    """
+    from shiftguard.features.harmonize import harmonize_dataset
+
+    if config["data"].get("source") == "synthetic":
+        ds = make_synthetic_dataset(config["data"], seed=config["experiment"]["base_seed"])
+    else:
+        from shiftguard.data.dataset import load_dataset
+
+        ds = load_dataset(config)
+    return harmonize_dataset(ds, config)

@@ -75,9 +75,9 @@ available as an option. Temperature scaling is monotone in the logit, so AUC is 
 For binary LAC, the true-label score is a monotone function of the signed margin
 $\pm z$ for every $T$, so **conformal sets are also unchanged** and reusing the
 calibration split for conformal prediction (phase 5) is harmless. That is not true for
-Platt scaling or for APS. **Proposed for phase 5 (to be confirmed):** for randomised APS,
-fit the temperature and the conformal quantile on disjoint halves of the calibration
-split.
+Platt scaling, for APS or for the EM prior adjustment. **Phase 5 (confirmed):** the
+temperature and the conformal quantile are fitted on disjoint halves of the calibration
+split, for every method (§4.7).
 
 **Metrics.** AUC; balanced accuracy at threshold 0.5; ECE of $P(\text{ASD})$ with 10
 equal-width bins, $\sum_m \tfrac{|B_m|}{n}|\bar y_{B_m} - \bar p_{B_m}|$; Brier score.
@@ -139,9 +139,12 @@ $C(x) = \{k : s(x,k) \le \hat q_k\}$. This guarantees $P\{Y \in C(X) \mid Y = k\
 One quantile per group $g$ known at test time (the acquisition site),
 $\hat q_g$ = conformal quantile of $\{S_i : G_i = g\}$, and $C(x, g) = \{y : s(x,y) \le
 \hat q_g\}$, which guarantees coverage within each group. A deployment site has
-calibration data only in the *few labelled target subjects* scenario (0, 5, 10 or 20
-labelled subjects moved to calibration). Groups without calibration data, or with fewer
-than $(1-\alpha)/\alpha$ points, get full sets.
+calibration data only in the *few labelled target subjects* scenario: $k \in \{0, 5, 10,
+20\}$ labelled deployment subjects form that site's calibration group. The labelled
+subjects are nested random draws (the 5 are among the 10, which are among the 20), and
+every arm is evaluated on the subjects outside the 20-subject draw, so all $k$ (and split
+CP, in the paired comparison) are scored on the same people. Groups without calibration
+data, or with fewer than $(1-\alpha)/\alpha$ points, get full sets.
 
 > **At $\alpha = 0.1$, per-site conformal needs at least 9 labelled target subjects.** The
 > 5-label arm is kept on purpose as an honest demonstration: by construction, it
@@ -167,10 +170,20 @@ that is, the $(1-\alpha)$ quantile of $\sum_i p_i(x)\,\delta_{S_i} + p_{n+1}(x)\
 on the test distribution is $\ge 1-\alpha$. With $w \equiv 1$ this reduces exactly to
 §4.2 (unit-tested).
 
-**Likelihood-ratio estimation.** A logistic-regression domain classifier
-$c(x) = \hat P(\text{target} \mid x)$ is fitted on *unlabelled* source and target
-features, and
-$\hat w(x) = \frac{c(x)}{1-c(x)} \cdot \frac{n_{\text{source}}}{n_{\text{target}}}$.
+**Likelihood-ratio estimation** (`shift/domain.py`). A domain classifier
+$c(x) = \hat P(\text{target} \mid x)$ separates the fold's training rows (source) from the
+*unlabelled* deployment rows (target):
+
+1. the features are standardised and reduced by PCA fitted on the training rows **plus
+   the unlabelled deployment rows** (transductive, no label used; randomised SVD);
+2. L2 logistic regression on the first $k$ components, with $k \in \{10, 20, 50, 100\}$
+   and $C \in \{0.01, 0.1, 1\}$ chosen by 5-fold stratified CV log loss on the domain
+   task; the out-of-fold **domain AUC** at the chosen values is reported for every site;
+3. calibration rows are never used to fit the classifier, so their weights are
+   out-of-sample; deployment rows get **cross-fitted** weights (each fold of target rows
+   is scored by a classifier that did not see it);
+4. $\hat w(x) = \frac{c(x)}{1-c(x)} \cdot \frac{n_{\text{source}}}{n_{\text{target}}}$, with the
+   counts of the fit that produced $c$.
 
 **Effective sample size.** Kish's $n_{\text{eff}} = (\sum_i w_i)^2 / \sum_i w_i^2$ of
 the calibration weights is reported with every weighted result.
@@ -180,12 +193,73 @@ calibration weights, and the same bounds are applied to test weights. This is a
 variance-reduction heuristic that voids the exact guarantee, so it is reported as a
 separate method.
 
-### 4.6 Abstention
+### 4.6 Label shift (prior shift)
+
+Under pure label shift, $p_t(x \mid y) = p_s(x \mid y)$ and only the class prior changes.
+
+**EM prior adjustment** (Saerens, Latinne and Decaestecker, 2002; `shift/label_shift.py`).
+Starting from the source prior $\pi_s$ (ASD fraction of the calibration sites), alternate
+
+$$
+\hat p_t(y \mid x_j) \propto \frac{\pi_t(y)}{\pi_s(y)}\, \hat p_s(y \mid x_j), \qquad
+\pi_t(y) \leftarrow \frac{1}{m}\sum_{j=1}^m \hat p_t(y \mid x_j)
+$$
+
+over the $m$ **unlabelled** deployment subjects until the prior changes by less than
+$10^{-8}$. EM needs calibrated source posteriors, so it is applied to the
+temperature-scaled probabilities. When the shift is not pure label shift, the estimate
+absorbs part of the other shift too.
+
+**Label-shift weighted CP** (Podkopaev and Ramdas, 2021; `conformal/label_shift.py`).
+The likelihood ratio depends on the label only, $w(y) = \hat\pi_t(y)/\pi_s(y)$, so the
+candidate label $y$ is in the set when $s(x, y)$ is at most the $(1-\alpha)$ quantile of
+$\sum_i p^y_i \delta_{S_i} + p^y_{n+1}\delta_{+\infty}$ with
+$p^y_i = w(Y_i) / (\sum_j w(Y_j) + w(y))$ and $p^y_{n+1} = w(y) / (\sum_j w(Y_j) + w(y))$:
+one threshold per class. Scores use the EM-adjusted probabilities (applied to calibration
+and deployment points alike). With the true priors, marginal coverage is $\ge 1-\alpha$
+under pure label shift; with EM priors it is approximate. An **oracle** arm with the
+site's true ASD fraction is reported as a reference only (it uses target labels).
+
+**Class-conditional CP under label shift.** Per-class coverage $P(Y \in C(X) \mid Y = k)$
+depends only on $p(x \mid y)$, so class-conditional CP keeps its per-class guarantee under
+pure label shift without any weights; marginal coverage is then a mixture of per-class
+coverages, each $\ge 1-\alpha$. The EM adjustment is a monotone transform of each class's
+probability, so it leaves class-conditional sets unchanged. This is why coverage is
+reported **per class (ASD and TDC) at every site**.
+
+### 4.7 Phase 5 protocol on ABIDE
+
+The baseline predictions of phase 4 are reused (no refit). In every fold, the calibration
+split is divided into two halves stratified by site x diagnosis: **half A** fits the
+temperature and **half B** is the conformal calibration set of every method. No
+calibration point is used twice; this matters for randomised APS and for the EM
+adjustment, which depend on the calibrated probability values (binary LAC sets do not).
+Primary model: L2 logistic regression; the MLP is secondary. Primary score: LAC.
+
+| Method | Uses target labels? | Uses target features? |
+|---|---|---|
+| split, class-conditional (LAC; APS variants) | no | no |
+| weighted, weighted (clipped) | no | yes (domain classifier) |
+| label-shift (EM) | no | yes (EM prior) |
+| label-shift (oracle) | **yes** (true prior), reference only | yes |
+| Mondrian, $k$ labels | **yes** ($k$ subjects, not evaluated) | no |
+| ComBat + split / class-conditional | no | yes (ComBat, §5) |
+
+Unit tests permute the deployment site's labels and check that the sets of every
+method marked "no" are unchanged. For the ComBat arm, the test reruns harmonisation and
+the refit as well (§5).
+
+**Coverage level.** The main analysis uses α = 0.1. A sensitivity run at α = 0.2
+(`shiftguard conformal <run> --alpha 0.2`, outputs tagged `_alpha0p2`) reports the
+coverage–abstention trade-off. At α = 0.2, Mondrian needs only $\lceil 0.8/0.2 \rceil = 4$
+labels, so the 5-label arm is no longer a full-set arm.
+
+### 4.8 Abstention
 
 A case is abstained when its prediction set is empty or contains both classes. We report
 the abstention rate and the accuracy on non-abstained (singleton) cases.
 
-### 4.7 Validation on synthetic data
+### 4.9 Validation on synthetic data
 
 `shiftguard simulate` writes
 [`reports/tables/conformal_synthetic.md`](../reports/tables/conformal_synthetic.md).
@@ -210,7 +284,62 @@ have this problem. **Score choice for ABIDE:** LAC is the primary score and rand
 APS the secondary one. Deterministic APS is reported once, as this documented failure case.
 
 ## 5. Harmonisation
-TBD (phase 5).
+
+**ComBat** (Johnson et al., 2007; Fortin et al., 2018; `features/harmonize.py`, via
+neuroHarmonize, empirical Bayes) removes an additive and a multiplicative site effect per
+edge while preserving age and sex.
+
+What the fit sees, exactly:
+
+- **Inputs:** the connectivity features of the training sites **plus the unlabelled
+  features of the deployment site**, the site of each subject, and two protected
+  covariates, `AGE_AT_SCAN` and `SEX`.
+- **Never an input:** the diagnosis of any subject, at any site. `combat_harmonize`
+  raises an error if a diagnosis column (`label`, `DX_GROUP`, `diagnosis`) is passed as a
+  covariate. No target label enters the fit.
+- **One fit for all folds:** ComBat is fitted once on all 944 subjects. In every LOSO fold,
+  each subject is either training, calibration or deployment data, and no label is used,
+  so this single fit is identical to a per-fold fit on "training sites + unlabelled
+  deployment site". The deployment site's batch parameters can only come from its own
+  features, so the step is **transductive**: it assumes the deployment site's unlabelled
+  data are available as a batch.
+
+The L2 logistic regression is then refitted on the harmonised features in every LOSO fold
+(`configs/experiment/loso_combat.yaml`). Only training-site labels are used for the fit,
+and only calibration-site labels for the temperature and the conformal quantile. Split
+and class-conditional CP are applied with the same calibration halves as the main
+analysis.
+
+**Leakage tests.**
+- `test_combat_output_does_not_depend_on_labels` checks that ComBat ignores labels.
+- `test_combat_arm_never_reads_deployment_labels` permutes the deployment site's labels
+  and reruns the whole chain (ComBat → LOSO refit → temperature → `combat+split` /
+  `combat+class_conditional` sets). The harmonised features, the logits and the
+  prediction sets must be identical.
+
+Leaving the diagnosis out has a cost: a site's case/control ratio is partly removed as
+"site effect".
+
+**ComBat + weighted CP.** For the combined arm, the domain classifier (§4.5) is refitted
+on the harmonised features of the same folds. ComBat removes site means and variances
+per edge, but the joint (multivariate) distribution of a site can still differ, so the
+weights are not trivially 1.
+
+**Describing the site effect** (`evaluation/site_effect.py`, `shiftguard site-effect`,
+Figure 2). This is a description on all subjects, not part of any evaluation fold:
+
+- *Site predictability:* balanced accuracy of predicting the site from the connectome
+  (standardise → PCA 50 → multinomial L2 logistic regression, all inside 5-fold CV
+  stratified by site; chance = 1/18).
+- *Variance explained by site:* the 10 leading principal components of the standardised
+  features are each regressed on site dummies. We report the variance-weighted mean
+  $R^2$, plus the partial $R^2$ of site beyond age, sex and diagnosis. The diagnosis enters
+  this description only.
+
+Both are computed before and after ComBat. One caveat for the post-ComBat accuracy:
+ComBat equalises site means on the full sample, so each held-out CV fold is shifted the
+opposite way. Post-ComBat accuracy can therefore fall slightly *below* chance; that
+means "no site signal left", not anti-information.
 
 ## 6. Label-free shift detection
 TBD (phase 6).
@@ -223,5 +352,28 @@ TBD (phase 6).
 - **Under-coverage test:** exact one-sided binomial test of
   $H_0: \text{coverage} \ge 1-\alpha$ against $H_1: \text{coverage} < 1-\alpha$, with
   p-value $P\{\mathrm{Bin}(n, 1-\alpha) \le k\}$.
-- TBD (phase 5): Benjamini–Hochberg across sites, paired bootstrap between methods,
-  empirical-Bayes beta-binomial for small sites.
+- **Per site** (`evaluation/conformal_summary.py`): each deployment site is evaluated
+  with 10 seeds; rates are averaged over seeds. The interval and the test use the
+  seed-averaged count $\mathrm{round}(\overline{k})$ out of the site's $n$ evaluated
+  subjects, i.e. the uncertainty of a site of that size. Per-class coverage (ASD, TDC)
+  is tested the same way within each class.
+- **Benjamini–Hochberg** (FDR 5%) across the sites of each (model, method) for marginal
+  coverage, and across sites x classes for per-class coverage.
+- **Paired bootstrap** between each method and split CP (same model): sites resampled
+  with replacement (2000 resamples), statistics = mean site coverage, mean shortfall
+  $\max(0, 1-\alpha-\text{coverage})$ and abstention; 95% percentile interval, two-sided
+  bootstrap p-value, BH across comparisons within a model.
+- **Empirical-Bayes beta-binomial**: $k_s \sim \mathrm{Bin}(n_s, \theta_s)$,
+  $\theta_s \sim \mathrm{Beta}(a, b)$, $(a, b)$ by maximum marginal likelihood; reported as
+  the between-site SD of true coverage, $\sqrt{ab/((a+b)^2(a+b+1))}$.
+- Caveat: given one calibration set, conformal coverage is itself random (Beta
+  distributed), so a per-site binomial test at $1-\alpha$ is approximate.
+
+## 8. Sensitivity analysis: ROI-level exclusion
+
+`configs/experiment/loso_droprois.yaml` replaces subject exclusion for constant ROIs
+(§1) by ROI exclusion: every ROI that is constant in any subject of the final cohort is
+removed for all subjects (`qc.zero_variance_policy: drop_rois`), and no subject is
+excluded for constant ROIs. This keeps 979 subjects from 19 sites (CMU stays; CALTECH is
+still lost to rater-1 failures) with 175 of 200 ROIs (15,225 edges). The primary model
+and the conformal methods are rerun on this cohort.

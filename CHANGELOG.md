@@ -7,6 +7,52 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Phase 5: conformal prediction under site shift. `shiftguard conformal <baseline run>
+  [--combat <run>]` reuses saved predictions. The calibration split is divided into
+  halves stratified by site × diagnosis: one fits the temperature, the other is the
+  conformal calibration set. Methods: split, class-conditional (LAC; randomised and
+  deterministic APS), Mondrian with 0/5/10/20 labelled target subjects (nested draws,
+  common evaluation set), covariate-shift weighted CP (PCA + L2 domain classifier with
+  CV, cross-fitted target weights, clipped variant), label-shift weighted CP (Podkopaev &
+  Ramdas) with EM priors (Saerens et al., 2002) and an oracle-prior reference, and ComBat
+  (neuroHarmonize, empirical Bayes, age + sex only; diagnosis forbidden) followed by a
+  refit (`configs/experiment/loso_combat.yaml`). A permutation test checks that no
+  label-free method uses deployment labels.
+- Phase 5 statistics: Clopper–Pearson per site and per site × class, Benjamini–Hochberg,
+  paired site bootstrap vs split CP, beta-binomial empirical Bayes (between-site SD).
+  Prevalence diagnostic: EM prior vs true prior, the pure-label-shift bound on
+  calibration-in-the-large (tested identity), offset vs class-coverage gap, and the EM
+  shift as a preview label-free signal. Tables `conformal_headline`, `conformal_sites`,
+  `conformal_comparisons`, `prevalence_shift`; Figures 3, 4, 5, 7.
+- `shiftguard conformal --alpha`: miscoverage sensitivity analysis with tagged outputs.
+  At α = 0.2 (run `2026-11-02_132458_conformal`), split CP abstention falls from 0.554 to
+  0.277, but the worst site-class coverage falls to 0.36. ComBat + split: 0.804 coverage,
+  worst site 0.684, abstention 0.264.
+- Leakage test for the ComBat arm. It permutes the deployment labels and reruns ComBat,
+  the LOSO refit and the `combat+` sets, which must be identical.
+- `report_tag` keeps variant runs (ComBat, drop-ROIs) from overwriting main tables;
+  `qc.zero_variance_policy: drop_rois` for the ROI-level exclusion sensitivity analysis
+  (`configs/experiment/loso_droprois.yaml`).
+- Brief items completed in phase 5:
+  - Site-effect description and Figure 2 (`shiftguard site-effect`): site balanced
+    accuracy 0.55 → 0.05 after ComBat (chance 0.06); R^2 of site on the 10 leading
+    components 0.13 → 0.005.
+  - ComBat + weighted CP arms (domain weights refitted on harmonised features).
+  - Accuracy on non-abstained cases.
+  - Per-site empirical-Bayes coverage next to the raw estimate.
+  - Figure 5: abstention and accuracy per site.
+  - Figures renumbered to the brief: 3b = class coverage, 4 = target labels, S1 =
+    prevalence shift.
+- Label-free signals recorded in every conformal fold (KS tests, confidence, abstention,
+  mean P(ASD) on calibration half B vs the deployment site), for phase 6.
+- Drop-ROIs sensitivity analysis (run `2026-11-02_131805_conformal`, 979 subjects, 19
+  sites): same conclusions as the main cohort.
+- Phase 5 results (run `2026-11-02_130158_conformal`): split CP 0.898 pooled, worst site
+  0.750, worst site-class 0.55; the site offset predicts which class loses coverage
+  (ρ = 0.91). The shift is mostly not a prior shift (only USM clearly is). EM-based
+  label-shift CP fails (0.729 coverage). ComBat + split gives the best label-free
+  worst-site coverage (0.856) at similar abstention. Covariate-shift weights degenerate
+  (ESS 3.7–35). Mondrian with 20 labels: +0.033 coverage for +0.091 abstention.
 - Phase 4: baselines. Nested-CV L2 logistic regression (exact full-rank PCA rotation
   speed-up, tested); PyTorch MLP with early stopping; temperature / Platt calibration;
   ECE and reliability tables. LOSO and within-site protocols with a leakage guard on

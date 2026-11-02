@@ -87,8 +87,14 @@ constant ROIs (28 if the one broken CALTECH scan with 118 is set aside, and 13 f
 subjects alone). So the **main analysis uses the strict subject rule**
 (`max_zero_variance_rois: 0`): 944 subjects, 18 sites, all 200 CC200 ROIs. This costs the
 CMU site: 9 of its 27 subjects are excluded, and CMU then fails the minimum-size rule.
-ROI-level exclusion (which would keep CMU) is planned as a **sensitivity analysis in
-phase 5**. CALTECH is lost under either option (15 rater-1 failures).
+ROI-level exclusion (which would keep CMU) was run as a **sensitivity analysis**
+(`configs/experiment/loso_droprois.yaml`). It drops the 25 ROIs that are constant in any
+kept subject and keeps 979 subjects from 19 sites (CMU: 23 subjects), with 175 ROIs
+(15,225 edges); see [cohort_summary_droprois.md](../reports/tables/cohort_summary_droprois.md).
+LOSO logistic-regression AUC is 0.725 (main cohort: 0.731). Split CP covers 0.895 (main:
+0.898), and CMU is covered at 0.930. Every phase 5 conclusion holds
+([conformal_headline_droprois.md](../reports/tables/conformal_headline_droprois.md)).
+CALTECH is lost under either option (15 rater-1 failures).
 
 Alternative rater rules (`all_raters_pass`, `nilearn_quality_checked` = nilearn's
 `quality_checked=True`, `none`) are one config line away.

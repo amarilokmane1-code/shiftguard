@@ -1,0 +1,14 @@
+# Sensitivity analysis (phase 5): ROI-level exclusion instead of subject exclusion.
+# Every ROI that is constant in any subject of the final cohort is removed for all
+# subjects; no subject is excluded for constant ROIs (CMU can then stay). Primary model.
+inherit:
+  - loso.yaml
+
+qc:
+  zero_variance_policy: drop_rois
+
+experiment:
+  name: loso_droprois
+  protocols: [loso]
+  models: [logreg]
+  report_tag: droprois
