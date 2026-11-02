@@ -65,17 +65,27 @@ survives distribution shift* in autism research.
 ## Pipeline
 
 ```mermaid
-%%{init: {"flowchart": {"htmlLabels": false}}}%%
 flowchart TD
-    A["ABIDE I<br/>1,112 subjects, 20 sites"] --> B["Quality control<br/>944 subjects, 18 sites"]
-    B --> C["Connectomes<br/>CC200 atlas, 19,900 edges"]
-    C --> D["Models<br/>logistic regression, MLP"]
-    C -. optional .-> H["ComBat<br/>harmonisation"]
+    A["`**ABIDE I**
+    1,112 subjects, 20 sites`"] --> B["`**Quality control**
+    944 subjects, 18 sites`"]
+    B --> C["`**Connectomes**
+    CC200 atlas, 19,900 edges`"]
+    C --> D["`**Models**
+    logistic regression, MLP`"]
+    C -. optional .-> H["`**ComBat**
+    harmonisation`"]
     H -.-> D
-    D --> E["Calibration<br/>temperature scaling"]
-    E --> F["Conformal methods<br/>split, class-conditional, Mondrian,<br/>weighted, label-shift"]
-    F --> G["Evaluation<br/>coverage per site and class,<br/>abstention, bootstrap"]
-    G --> I["Label-free detection<br/>8 signals vs coverage loss"]
+    D --> E["`**Calibration**
+    temperature scaling`"]
+    E --> F["`**Conformal methods**
+    split, class-conditional, Mondrian,
+    weighted, label-shift`"]
+    F --> G["`**Evaluation**
+    coverage per site and class,
+    abstention, bootstrap`"]
+    G --> I["`**Label-free detection**
+    8 signals vs coverage loss`"]
 ```
 
 Every model is trained with **leave-one-site-out (LOSO)**: one site plays the new hospital
