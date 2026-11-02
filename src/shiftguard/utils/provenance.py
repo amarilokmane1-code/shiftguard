@@ -26,14 +26,11 @@ TRACKED_PACKAGES: tuple[str, ...] = (
     "scipy",
     "pandas",
     "scikit-learn",
-    "statsmodels",
     "nilearn",
     "matplotlib",
     "torch",
     "neuroHarmonize",
     "neuroCombat",
-    "pymc",
-    "torch-geometric",
 )
 
 

@@ -73,11 +73,11 @@ only the stopping epoch is data-driven.
 $\hat p = \sigma(z/T)$, with $T$ minimising the calibration-split NLL; Platt scaling is
 available as an option. Temperature scaling is monotone in the logit, so AUC is unchanged.
 For binary LAC, the true-label score is a monotone function of the signed margin
-$\pm z$ for every $T$, so **conformal sets are also unchanged** and reusing the
-calibration split for conformal prediction (phase 5) is harmless. That is not true for
-Platt scaling, for APS or for the EM prior adjustment. **Phase 5 (confirmed):** the
-temperature and the conformal quantile are fitted on disjoint halves of the calibration
-split, for every method (§4.7).
+$\pm z$ for every $T$, so **conformal sets are also unchanged**: reusing the calibration
+split for conformal prediction would be harmless for split LAC. It is not harmless for
+Platt scaling, for APS or for the EM prior adjustment. So the temperature and the
+conformal quantile are fitted on disjoint halves of the calibration split, for every
+method (§4.7).
 
 **Metrics.** AUC; balanced accuracy at threshold 0.5; ECE of $P(\text{ASD})$ with 10
 equal-width bins, $\sum_m \tfrac{|B_m|}{n}|\bar y_{B_m} - \bar p_{B_m}|$; Brier score.
@@ -244,6 +244,7 @@ Primary model: L2 logistic regression; the MLP is secondary. Primary score: LAC.
 | label-shift (oracle) | **yes** (true prior), reference only | yes |
 | Mondrian, $k$ labels | **yes** ($k$ subjects, not evaluated) | no |
 | ComBat + split / class-conditional | no | yes (ComBat, §5) |
+| ComBat + weighted (plain, clipped) | no | yes (ComBat; domain classifier on harmonised features) |
 
 Unit tests permute the deployment site's labels and check that the sets of every
 method marked "no" are unchanged. For the ComBat arm, the test reruns harmonisation and

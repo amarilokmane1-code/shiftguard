@@ -81,7 +81,7 @@ updated with what the experiments showed. Items 7–12 come from the results.*
     deployment data must be available as a batch. Because the diagnosis cannot be a
     covariate, a site's case/control mix is partly absorbed into its "site effect". In
     this benchmark, ComBat removed the site signal (site balanced accuracy 0.55 → 0.05,
-   chance 0.06), raised the refitted model's LOSO AUC from 0.731 to 0.749 and
+    chance 0.06), raised the refitted model's LOSO AUC from 0.731 to 0.749 and
     gave the best worst-site coverage among label-free methods. The improvement in mean
     shortfall is modest: −0.017, 95% CI [−0.035, −0.002] with the site bootstrap. It is
     not significant under the two-stage bootstrap, which also resamples subjects within

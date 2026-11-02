@@ -32,7 +32,7 @@ ranking). Every method is then applied to the same deployment subjects:
     The same, from a baseline run refitted on ComBat-harmonised features (weighted arms
     with domain weights estimated on the harmonised features).
 
-Every fold also records **label-free signals** for phase 6 (``shift.detection``): mean
+Every fold also records **label-free signals** for phase 6 (``evaluation.detection``): mean
 P(ASD) and mean max-probability on calibration half B and on the deployment site, KS
 two-sample tests between the two, and the split-CP abstention rate on both.
 

@@ -27,4 +27,5 @@ features:
   kind: correlation         # correlation | partial correlation | tangent
   fisher_z: true            # correlation kinds only
   cov_estimator: ledoit_wolf
-  vectorize: upper_triangle_no_diagonal
+  # Features are always the strict upper triangle of the ROI x ROI matrix (fixed in
+  # src/shiftguard/features/connectivity.py): R (R - 1) / 2 = 19,900 for CC200.

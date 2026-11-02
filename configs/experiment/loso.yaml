@@ -15,6 +15,6 @@ experiment:
   n_seeds: 10
   calibration_fraction: 0.30   # train/calibration split inside the training sites
   test_fraction: 0.20          # within-site protocol only
-  stratify_by: [SITE_ID, DX_GROUP]
+  # splits are always stratified by site x diagnosis (evaluation/protocols.py)
   models: [logreg, mlp]
   n_jobs: -1

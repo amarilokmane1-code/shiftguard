@@ -37,7 +37,7 @@ experiment:
   n_seeds: 2
   calibration_fraction: 0.30
   test_fraction: 0.20
-  stratify_by: [SITE_ID, DX_GROUP]
+  # splits are always stratified by site x diagnosis (evaluation/protocols.py)
   models: [logreg]
   n_jobs: 1
 

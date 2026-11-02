@@ -38,6 +38,6 @@ jobs:
       - name: Install CPU-only PyTorch
         run: pip install torch --index-url https://download.pytorch.org/whl/cpu
       - name: Install package
-        run: pip install -e ".[dev,harmonize]"
+        run: pip install -e ".[torch,dev,harmonize]"
       - name: Run tests
         run: pytest --cov=shiftguard --cov-report=term-missing --cov-report=xml

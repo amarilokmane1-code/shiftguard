@@ -345,9 +345,9 @@ def offset_vs_class_gap(
     per-class coverage gap (ASD minus TDC), for split and class-conditional CP. A positive
     offset (ASD over-predicted) should favour ASD and cost TDC coverage.
 
-    Preview of the label-free signal of phase 6: the EM-estimated prevalence shift
-    (no target label) against the split-CP coverage drop below target and against the
-    class gap.
+    Also the EM-estimated prevalence shift (no target label) against the split-CP
+    coverage drop below target and against the class gap; the full label-free analysis
+    (all signals, bootstrap CIs, BH, size adjustment) is in ``evaluation/detection.py``.
     """
     out: dict[str, Any] = {}
     loso = sites[(sites["protocol"] == "loso") & (sites["model"] == model)]

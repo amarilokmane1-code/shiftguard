@@ -35,7 +35,7 @@ CPU session should be of the same order.
 
 | Step | Command | Time |
 |---|---|---|
-| Clone + install | `git clone`, `pip install` | ~ a few minutes |
+| Clone + install (CPU PyTorch, package, ComBat) | `git clone`, `pip install` | ~8 min |
 | Download ABIDE (1035 files, 0.4 GB) | `shiftguard download` | ~7 min |
 | QC + connectomes | `shiftguard features` | ~3 min |
 | Synthetic validity checks | `shiftguard simulate` | < 1 min |

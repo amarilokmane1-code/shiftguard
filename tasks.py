@@ -21,7 +21,7 @@ def _run(*args: str) -> None:
 
 def install() -> None:
     """Editable install with development extras."""
-    _run(PY, "-m", "pip", "install", "-e", ".[dev,harmonize]")
+    _run(PY, "-m", "pip", "install", "-e", ".[torch,dev,harmonize]")
     _run(PY, "-m", "pre_commit", "install")
 
 

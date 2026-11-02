@@ -238,7 +238,7 @@ See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short:
 ## Reproduce
 
 ```bash
-pip install -e ".[harmonize]"
+pip install -e ".[torch,harmonize]"
 shiftguard all --config configs/experiment/loso.yaml --sensitivity
 shiftguard report
 ```
@@ -247,8 +247,8 @@ shiftguard report
 `reports/final_runs.yaml`. `report` rebuilds every table and figure from those runs, then
 writes `docs/RESULTS.md` and the key-results table above. The full pipeline takes several
 hours on a laptop CPU (see the Kaggle notebook for per-step times). On a CPU-only
-machine, install PyTorch from the CPU index first, so pip does not fetch the much larger
-CUDA build:
+machine, install PyTorch from the CPU index **before** the first command, so pip does not
+fetch the much larger CUDA build:
 
 ```bash
 pip install torch --index-url https://download.pytorch.org/whl/cpu
@@ -257,7 +257,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu
 Development (lint, tests, pre-commit; CI never downloads ABIDE):
 
 ```bash
-pip install -e ".[dev,harmonize]"
+pip install -e ".[torch,dev,harmonize]"
 python tasks.py lint
 python tasks.py test
 ```

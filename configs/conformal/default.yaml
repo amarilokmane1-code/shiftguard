@@ -1,39 +1,37 @@
+# Conformal prediction, harmonisation and statistics (phase 5). Only keys read by the
+# code are settings; fixed design choices are documented in comments (METHODS.md §4-7).
+#
+# Fixed in code (src/shiftguard/evaluation/conformal_runner.py):
+#   - scores: LAC (primary) and randomised APS (secondary); every method below is run.
+#   - methods (LOSO): split, class-conditional, Mondrian with n_target_labelled target
+#     subjects, covariate-shift weighted (plain and clipped), label-shift weighted with an
+#     EM prior (and an oracle-prior reference), and ComBat + split / class-conditional /
+#     weighted when a ComBat run is given. Within-site folds get split, class-conditional
+#     and APS only.
+#   - the domain classifier's PCA is fitted on training + UNLABELLED deployment features
+#     (transductive, no labels); its out-of-fold AUC and the weights' effective sample
+#     size are reported for every site.
 conformal:
-  alpha: 0.10                 # target coverage = 1 - alpha
-  primary_score: lac          # main score for ABIDE
-  scores: [lac, aps]          # aps is secondary
-  aps_randomized: true        # deterministic APS degenerates for binary tasks (METHODS 4.7);
-  report_deterministic_aps_once: true   # ... it is reported once, as a documented failure case
-  methods:
-    - split                   # marginal split conformal
-    - class_conditional       # coverage per diagnosis group
-    - mondrian_site           # group-conditional by site (needs labelled target subjects)
-    - weighted                # weighted CP for covariate shift (Tibshirani et al., 2019)
+  alpha: 0.10                 # target coverage = 1 - alpha (override: conformal --alpha)
+  # Deterministic APS degenerates for binary tasks (METHODS 4.9); reported once as a
+  # documented failure case.
+  report_deterministic_aps_once: true
   # Few-labelled-target scenario. At alpha = 0.1 per-site conformal needs >= 9 labelled
   # target subjects; the 5-label arm is kept on purpose (it must abstain on everyone).
   n_target_labelled: [0, 5, 10, 20]
   weighted:
     domain_classifier:
-      # PCA is fitted on training features + UNLABELLED target features (transductive,
-      # no labels used); n_components and C chosen by CV; then L2 logistic regression.
-      pca_fit_on: train_plus_target_unlabelled
-      pca_components_grid: [10, 20, 50, 100]
+      pca_components_grid: [10, 20, 50, 100]   # chosen with C by CV log loss
       C_grid: [0.01, 0.1, 1.0]
       cv_folds: 5
-      report_auc: true                # domain-classifier AUC reported for every site
     clip_quantiles: [0.01, 0.99]      # separate method: voids the exact guarantee
-    min_effective_sample_size: 20
 
+# ComBat (src/shiftguard/features/harmonize.py): fitted on all subjects without labels, so
+# the deployment site's parameters come from its own unlabelled features (transductive).
 harmonization:
-  methods: [none, combat]
-  covariates: [AGE_AT_SCAN, SEX]      # diagnosis is NEVER a covariate
-  # An unseen site's batch parameters can only be estimated from that site's own data.
-  # transductive_unlabelled: location/scale parameters for the target site are estimated
-  # from its unlabelled features (no target labels). Flagged "transductive" in all outputs.
-  target_mode: transductive_unlabelled
+  covariates: [AGE_AT_SCAN, SEX]      # preserved effects; diagnosis is NEVER a covariate
 
+# Fixed in code (src/shiftguard/evaluation/statistics.py, conformal_summary.py): 95%
+# Clopper-Pearson intervals, Benjamini-Hochberg FDR, empirical-Bayes beta-binomial.
 statistics:
-  n_bootstrap: 2000
-  ci_level: 0.95
-  fdr_method: benjamini_hochberg
-  bayes: empirical_bayes      # empirical_bayes | pymc
+  n_bootstrap: 2000           # site bootstrap and two-stage bootstrap resamples

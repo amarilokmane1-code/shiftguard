@@ -7,8 +7,10 @@
 ``shiftguard conformal`` conformal prediction under site shift (phase 5)
 ``shiftguard site-effect`` site effect on the features before / after ComBat
 ``shiftguard detect``    label-free shift detection (phase 6)
-``shiftguard report``    regenerate tables, figures and docs/RESULTS.md
-``shiftguard all``       the whole pipeline
+``shiftguard report``    regenerate tables, figures and docs/RESULTS.md from saved runs
+``shiftguard simulate``  synthetic validity checks of the conformal core
+``shiftguard all``       the whole pipeline (writes the run manifest)
+``shiftguard info``      version and environment
 """
 
 from __future__ import annotations
@@ -42,12 +44,6 @@ OverrideOption = Annotated[
     list[str] | None,
     typer.Option("--set", "-s", help="Override a config value, e.g. -s experiment.n_seeds=3."),
 ]
-
-
-def _not_ready(stage: str, phase: int) -> None:
-    """Exit with a clear message for stages that are implemented in a later phase."""
-    log.error("`shiftguard %s` is implemented in phase %d and is not available yet.", stage, phase)
-    raise typer.Exit(code=2)
 
 
 @app.callback()
