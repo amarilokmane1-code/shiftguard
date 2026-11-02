@@ -1,70 +1,97 @@
+<div align="center">
+
 # ShiftGuard
 
 **Does conformal abstention survive site shift? A multi-site autism neuroimaging benchmark.**
 
-[![CI](https://github.com/amarilokmane1-code/shiftguard/actions/workflows/ci.yml/badge.svg)](https://github.com/amarilokmane1-code/shiftguard/actions/workflows/ci.yml)
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+*A model that says "I am 90% sure" must keep that promise at a hospital it has never seen.
+This benchmark measures when it does not, and which corrections actually help.*
 
-> **Main finding: pooled numbers hide site-level failure.** Pooled over deployment sites,
-> the leave-one-site-out model is calibrated (ECE 0.032 vs 0.034 for a perfectly
-> calibrated model of the same size), and split conformal prediction covers 89.8% of
-> subjects at a 90% target. Per site, calibration offsets of opposite sign (KKI +0.22,
-> LEUVEN_1 −0.21) **cancel out in the pooled curve**. Coverage ranges from 0.75 to 0.95,
-> and within one diagnostic class it drops to 0.55. The sign of a site's offset predicts
-> which class loses coverage (Spearman ρ = 0.91, 18 sites). Without any label from the
-> new site, the *direction* of the problem can be read off the predictions (ρ = 0.83).
-> The *size* of the marginal coverage drop cannot: no label-free signal survives
-> correction.
+[![CI](https://github.com/amarilokmane1-code/shiftguard/actions/workflows/ci.yml/badge.svg)](https://github.com/amarilokmane1-code/shiftguard/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Data: ABIDE I](https://img.shields.io/badge/data-ABIDE%20I%20%28PCP%29-lightgrey.svg)](docs/DATA_CARD.md)
+[![Not for clinical use](https://img.shields.io/badge/clinical%20use-no-red.svg)](docs/MODEL_CARD.md)
+
+</div>
 
 ![Coverage per deployment site](reports/figures/fig3_coverage_per_site.png)
 
-*Figure 3. Coverage per unseen deployment site (logistic regression, leave-one-site-out,
-10 seeds) with Clopper–Pearson 95% intervals; vertical line = 90% target; filled =
-significantly below target after Benjamini–Hochberg; panel titles give the mean site
-abstention rate.*
+*Figure 3. Each row is one hospital the model never saw during training. A dot left of
+the vertical line (90% target) means the promised coverage was not met there. Split
+conformal prediction meets the target on average but not at every site; the standard
+label-shift correction (middle) makes it worse; ComBat harmonisation (right) narrows the
+spread. Bars: Clopper–Pearson 95% intervals; filled = significantly below target after
+Benjamini–Hochberg.*
 
-## The question
+## TL;DR: key findings
 
-A classifier predicts autism spectrum disorder (ASD) versus typical controls from
-resting-state functional connectivity (ABIDE I). It is wrapped in **conformal
-prediction**: instead of a single label, it returns a *prediction set* that should
-contain the true label with a chosen probability (here 90%). It **abstains** when that
-set is not a single class.
+- **Pooled numbers hide site-level failure.** At a 90% target, split conformal prediction
+  covers **89.8%** of subjects pooled over 18 unseen sites, but only **75%** at the worst
+  site and **55%** for one diagnostic group at one site.
+- **The cause is site-specific miscalibration, mostly not a change in how many autistic
+  participants a site has.** Sites over- and under-estimate autism in opposite directions
+  (KKI +0.22, LEUVEN_1 −0.21), and these errors cancel in pooled numbers. Prevalence
+  (label) shift explains only 33% of them.
+- **Two textbook corrections fail.** Label-shift conformal prediction with an EM prior
+  estimate drops to **72.9%** coverage. Covariate-shift weighting reaches its coverage
+  only by abstaining on **86%** of subjects.
+- **ComBat harmonisation is the best correction without labels**, but its gain is modest:
+  worst site 75% → **85.6%**, worst site-class 55% → **79%**, and the gain in mean
+  shortfall is not robust to a stricter (two-stage) bootstrap (q = 0.076). Twenty labelled
+  subjects from the new site help more reliably (+3.3 coverage points, 95% CI
+  [0.9, 5.9]), at the cost of more abstention.
+- **Without any label, the *direction* of the failure is detectable but its *size* is
+  not.** The shift in mean predicted P(ASD) predicts which diagnosis loses coverage
+  (Spearman ρ = 0.83, q = 0.001, 18 sites). No label-free signal predicts how much
+  coverage drops (all q ≥ 0.23), and a high abstention rate is not a warning sign.
+- **Honest scope.** The classifier is weak (AUC 0.73), so more than half of subjects
+  receive both labels. This is a research benchmark, **not a diagnostic tool**.
 
-That guarantee rests on one assumption: calibration and deployment data are
-*exchangeable*. A new hospital, scanner or protocol breaks that assumption. ShiftGuard
-asks:
+## Why this matters
 
-1. Does the coverage guarantee still hold when the model is deployed at a **site it has
-   never seen** (leave-one-site-out, LOSO)?
-2. Which corrections actually protect it?
-   - **ComBat harmonisation**;
-   - **Mondrian (site-conditional) conformal** with a few labelled target subjects;
-   - **weighted conformal prediction** for covariate shift or for label shift;
-   - **class-conditional** conformal prediction.
-3. Can a loss of coverage at a new site be **detected without labels**?
+Clinical AI models are usually trained on data from a few hospitals and then used at
+others, with different scanners, protocols and patient populations. Conformal prediction
+is a popular way to make such models "know when they don't know": instead of a single
+answer, the model returns a set of possible answers that is guaranteed to contain the
+truth, for example, 90% of the time, and it abstains when it is unsure. That guarantee
+assumes the new hospital's data look like the calibration data. ShiftGuard tests what
+happens when that assumption breaks, on real multi-site brain-imaging data, and reports
+the failures as carefully as the successes. The practical lesson is to report
+reliability **per site and per group, never only pooled**, and to budget a few labelled
+cases at every new site. This is the pilot study for a PhD proposal on *abstention that
+survives distribution shift* in autism research.
 
-## Why it matters
+## Pipeline
 
-Clinical prediction models are trained on data from a few centres and then deployed
-elsewhere. A model that says "I am 90% sure" has to keep that promise at the new site, or
-it has to know when to abstain. This project is the pilot study for a PhD proposal on
-*abstention that survives distribution shift* in autism research.
+```mermaid
+flowchart LR
+    A["ABIDE I<br/>1,112 subjects, 20 sites"] --> B["Quality control<br/>944 subjects, 18 sites"]
+    B --> C["Connectomes<br/>CC200, 19,900 edges"]
+    C -. optional .-> H["ComBat<br/>harmonisation"]
+    C --> D["Models<br/>L2 logistic regression, MLP"]
+    H -.-> D
+    D --> E["Calibration<br/>temperature scaling"]
+    E --> F["Conformal methods<br/>split, class-conditional, Mondrian,<br/>weighted, label-shift"]
+    F --> G["Evaluation<br/>coverage per site and class,<br/>abstention, bootstrap"]
+    G --> I["Label-free detection<br/>8 signals vs coverage loss"]
+```
 
-## Key results
+Every model is trained with **leave-one-site-out (LOSO)**: one site plays the new hospital
+and is never used for training, calibration or tuning. The only exceptions are the
+explicit few-labels arm (Mondrian), and ComBat and the domain classifier, which see that
+site's **unlabelled** features. 10 seeds; the calibration split is halved (temperature
+scaling / conformal quantile).
 
-*Generated by `shiftguard report` from
-[conformal_headline.csv](reports/tables/conformal_headline.csv) and the baseline
-tables; the runs they come from are listed in [docs/RESULTS.md](docs/RESULTS.md).*
+## Results
 
-**Setup.** L2 logistic regression, LAC score, α = 0.1 (target coverage 0.90), 10 seeds.
-
-**Columns.**
-- Coverage gap: mean over sites of max(0, 0.90 − site coverage).
-- Worst site-class: the lowest coverage within one diagnosis at one site.
-- Abstention: the prediction set is not a single class.
-- Accuracy (kept): accuracy on the subjects that received a single label.
+*The table between the markers is generated by `shiftguard report` from
+[conformal_headline.csv](reports/tables/conformal_headline.csv) and the baseline tables;
+the runs it comes from are listed in [docs/RESULTS.md](docs/RESULTS.md).* L2 logistic
+regression, LAC score, α = 0.1 (target coverage 0.90), 10 seeds. **Coverage gap** = mean
+over sites of max(0, 0.90 − site coverage); **worst site-class** = lowest coverage within
+one diagnosis at one site; **abstention** = the prediction set is not a single class;
+**accuracy (kept)** = accuracy on the subjects that received a single label.
 
 <!-- key-results:start -->
 | Setting | Method | AUC | Balanced acc. | Marginal coverage | Worst-site coverage | Worst site-class | Coverage gap | Abstention | Accuracy (kept) |
@@ -80,14 +107,14 @@ tables; the runs they come from are listed in [docs/RESULTS.md](docs/RESULTS.md)
 
 <!-- key-results:end -->
 
-Mondrian is scored on the subjects outside its 20 labelled ones, as is the matching
-split CP in the paired comparison. With 0 or 5 target labels it returns full sets (100%
+Mondrian is scored on the subjects outside its 20 labelled ones, as is the matching split
+CP in the paired comparison. With 0 or 5 target labels it returns full sets (100%
 abstention), because a group needs at least 9 points at α = 0.1.
 
 **Why so much abstention?** A conformal predictor returns a single label only when the
-model is confident enough to meet the coverage target. With AUC ≈ 0.73, most subjects
-sit near the decision boundary, so at 90% coverage more than half get both labels. Asking
-for less coverage buys fewer abstentions, but it does not remove the site failures:
+model is confident enough to meet the coverage target. With AUC ≈ 0.73, most subjects sit
+near the decision boundary. Asking for less coverage (α = 0.2) halves abstention, but it
+does not remove the site failures:
 
 | α (target) | Method | Marginal coverage | Worst-site coverage | Worst site-class | Abstention |
 |---|---|---|---|---|---|
@@ -98,20 +125,31 @@ for less coverage buys fewer abstentions, but it does not remove the site failur
 | 0.2 (0.80) | Class-conditional CP | 0.800 | 0.646 | 0.357 | 0.285 |
 | 0.2 (0.80) | ComBat + split CP | 0.804 | 0.684 | 0.607 | 0.264 |
 
-At α = 0.2, split CP leaves two site-classes significantly below target: LEUVEN_1 ASD at
-0.36 and KKI controls at 0.48 (BH q < 0.05)
-([headline, α = 0.2](reports/tables/conformal_headline_alpha0p2.md)).
+### Figure gallery
 
-## Findings
+All figures are regenerated from the saved runs by `shiftguard report`
+(PNG and PDF in [reports/figures/](reports/figures/)).
 
-Full tables and every figure: [docs/RESULTS.md](docs/RESULTS.md). Methods:
-[docs/METHODS.md](docs/METHODS.md).
+| | |
+|---|---|
+| **Figure 1. The cohort.** 944 of 1,112 subjects pass quality control; look at how unequal the sites are (25 to 172 subjects), which limits per-site power. | **Figure 2. The site effect.** Before ComBat the scanning site can be read from the connectome (balanced accuracy 0.55, chance 0.06); after ComBat it cannot (0.05). |
+| ![Figure 1](reports/figures/fig1_data_map.png) | ![Figure 2](reports/figures/fig2_site_effect.png) |
+| **Figure 3b. Coverage per diagnosis and site.** Look for the blue (ASD) and orange (TDC) markers on opposite sides of the 90% line: the class that loses coverage changes from site to site. | **Figure 4. Labels vs abstention.** Left: Mondrian needs about 10–20 labelled target subjects before it returns informative sets. Right: every method's worst-site coverage against its abstention rate; methods that protect the worst site better tend to abstain more. |
+| ![Figure 3b](reports/figures/fig3b_class_coverage.png) | ![Figure 4](reports/figures/fig4_target_labels.png) |
+| **Figure 5. Abstention per site.** Grey bars are abstention, dots are accuracy on the subjects that got a single label; covariate-shift weighting (third panel) abstains on almost everyone. | **Figure 6. Calibration.** Pooled curves look well calibrated, but the right column shows per-site offsets (KKI, LEUVEN_1, USM, PITT) outside the grey range expected without shift. |
+| ![Figure 5](reports/figures/fig5_abstention_per_site.png) | ![Figure 6](reports/figures/fig6_reliability.png) |
+| **Figure 7. Label-free signals vs coverage drop.** No panel shows a reliable trend: none of the eight signals predicts how much coverage a site loses. | **Figure 7b. Which class loses coverage.** A clear diagonal: the sign of the mean P(ASD) shift tells which diagnosis will be under-covered (ρ = 0.83). |
+| ![Figure 7](reports/figures/fig7_detection.png) | ![Figure 7b](reports/figures/fig7b_detection_class_gap.png) |
+| **Figure S1. Is it label shift?** Left: the EM prevalence estimate does not track the true ASD fraction. Right: most offsets lie far from the dotted line that pure label shift would produce. | |
+| ![Figure S1](reports/figures/figS1_prevalence_shift.png) | |
 
-### Baselines and calibration (phase 4)
+<details>
+<summary><b>Detailed findings by phase</b> (statistics, effect sizes, negative results)</summary>
+
+#### Baselines and calibration
 
 944 subjects, 18 sites, CC200 correlation connectomes (19,900 edges), mean ± SD over 10
-seeds ([baselines](reports/tables/baselines.md),
-[Figure 6](reports/figures/fig6_reliability.png)).
+seeds ([baselines](reports/tables/baselines.md)).
 
 | Protocol | Model | AUC | Worst-site AUC | Balanced acc. | ECE (calibrated) | Null ECE at same n |
 |---|---|---|---|---|---|---|
@@ -121,121 +159,122 @@ seeds ([baselines](reports/tables/baselines.md),
 | LOSO | MLP | 0.690 ± 0.014 | 0.468 ± 0.061 | 0.628 ± 0.018 | 0.029 ± 0.008 | 0.033 |
 
 Pooled over sites, leaving a site out costs almost nothing: logistic-regression AUC is
-0.731 under LOSO vs 0.732 within-site. The shift shows up **per site**. AUC ranges from
-0.53 (OHSU) to 0.84 (USM). At 4 of 18 deployment sites, the mean predicted ASD
+0.731 under LOSO vs 0.732 within-site. The shift shows up **per site**: AUC ranges from
+0.53 (OHSU) to 0.84 (USM), and at 4 of 18 deployment sites the mean predicted ASD
 probability is off from the observed ASD fraction by more than chance (KKI +0.22,
-LEUVEN_1 −0.21). **These offsets cancel in the pooled curve**, so the pooled LOSO model
-looks calibrated while individual sites are not.
+LEUVEN_1 −0.21). These offsets cancel in the pooled curve.
 
-### Conformal prediction under site shift (phase 5)
+#### Conformal prediction under site shift
 
 Per-site and per-class tests use exact binomial tests with Clopper–Pearson intervals and
 Benjamini–Hochberg (BH) correction. Method differences use a paired bootstrap over sites
-(2000 resamples). A two-stage bootstrap, which also resamples subjects within sites, is
-reported as a sensitivity analysis
-([comparisons](reports/tables/conformal_comparisons.md)).
+(2000 resamples); a two-stage bootstrap that also resamples subjects within sites is a
+sensitivity analysis ([comparisons](reports/tables/conformal_comparisons.md)).
 
 1. **Split CP holds on average but not per site or per class.** No single site is
-   significantly below 90% after BH: sites have 25–172 subjects, so power is low. Still,
+   significantly below 90% after BH (25–172 subjects per site, so power is low). Still,
    11 of 18 sites are below target, the empirical-Bayes between-site SD of true coverage
-   is 0.030, and within-class coverage reaches 0.55 (ASD at LEUVEN_1;
-   [Figure 3b](reports/figures/fig3b_class_coverage.png)).
+   is 0.030, and within-class coverage reaches 0.55 (ASD at LEUVEN_1).
 2. **The shift is mostly *not* a prior (label) shift.** The true ASD fraction at KKI,
-   LEUVEN_1 and PITT is within 0.08 of the training sites. Yet their calibration offsets
+   LEUVEN_1 and PITT is within 0.08 of the training sites, yet their calibration offsets
    (+0.22, −0.21, −0.13) are about 4, 21 and 4 times what a prior shift of that size can
    produce. Pure label shift accounts for 33% of the summed squared offsets, and the
    offsets exceed its bound by more than 2 SD at 5 sites. **USM is the one clear prior
    shift** (ASD fraction 0.65 vs 0.47; offset −0.16, predicted −0.15)
-   ([prevalence shift](reports/tables/prevalence_shift.md),
-   [Figure S1](reports/figures/figS1_prevalence_shift.png)).
-3. **Label-shift correction fails (negative result).** The EM prior estimate (Saerens
-   et al., 2002) from unlabelled deployment data does not track the true ASD fraction
-   (ρ = 0.11 across sites). With a weak classifier, EM reads a site-wide logit shift as a
-   large prior shift: it runs to within 0.05 of 0 or 1 at 5 of 18 sites. Label-shift CP
-   with EM priors falls to 0.729 coverage (−0.188 vs split CP, 95% CI [−0.257, −0.121]).
-   With the *true* prior (an oracle that uses target labels), it equals split CP.
+   ([prevalence shift](reports/tables/prevalence_shift.md)).
+3. **Label-shift correction fails (negative result).** The EM prior estimate (Saerens et
+   al., 2002) does not track the true ASD fraction (ρ = 0.11 across sites); it runs to
+   within 0.05 of 0 or 1 at 5 of 18 sites. Label-shift CP with EM priors falls to 0.729
+   coverage (−0.188 vs split CP, 95% CI [−0.257, −0.121]). With the *true* prior (an
+   oracle that uses target labels), it equals split CP.
 4. **Class-conditional CP does not rescue per-class coverage.** Its per-class guarantee
    holds under pure label shift only. KKI controls (0.69) and LEUVEN_1 ASD (0.61) remain
    significantly below target.
-5. **ComBat is the best label-free correction here.** Before harmonisation, the site can
-   be predicted from the connectome with balanced accuracy 0.55 (chance 0.06). After
-   ComBat (age and sex preserved, no diagnosis, fitted on the training sites plus the
-   unlabelled deployment site) it is at chance
-   ([Figure 2](reports/figures/fig2_site_effect.png)). ComBat + split CP raises the
-   worst site from 0.750 to 0.856 and the worst site-class from 0.55 to 0.79. Mean
-   shortfall changes by −0.017 [−0.035, −0.002] (q = 0.045), and abstention does not
-   change significantly. The gain is modest and not robust: the two-stage bootstrap,
-   which adds within-site sampling noise, gives [−0.038, +0.000] (q = 0.076). Adding
-   covariate-shift weights on top changes nothing.
+5. **ComBat is the best label-free correction here.** Fitted on the training sites plus
+   the unlabelled deployment site (age and sex preserved, no diagnosis), it removes the
+   site signal. ComBat + split CP raises the worst site from 0.750 to 0.856 and the worst
+   site-class from 0.55 to 0.79. Mean shortfall changes by −0.017 [−0.035, −0.002]
+   (q = 0.045) with the site bootstrap, but by [−0.038, +0.000] (q = 0.076) with the
+   two-stage bootstrap: the gain is modest and not robust. Covariate-shift weights on top
+   change nothing.
 6. **A few target labels help, at a price.** Mondrian CP with 20 labelled deployment
-   subjects adds +0.033 coverage [0.009, 0.059] and +0.091 abstention
-   ([Figure 4](reports/figures/fig4_target_labels.png)).
+   subjects adds +0.033 coverage [0.009, 0.059] and +0.091 abstention.
 7. **Covariate-shift weighting degenerates.** A domain classifier separates every
-   deployment site from the training sites (AUC 0.78–1.00). The weights leave an
+   deployment site from the training sites (AUC 0.78–1.00); the weights leave an
    effective sample size of 3.7–35 calibration points, so the sets are nearly full
-   (abstention 0.86; [Figure 5](reports/figures/fig5_abstention_per_site.png)). Its high
-   coverage comes from abstaining, not from correcting the shift.
-8. **Robustness.** Three checks leave the conclusions unchanged:
-   - the MLP;
-   - α = 0.2;
-   - ROI-level instead of subject-level exclusion: 979 subjects, 19 sites, split CP
-     0.895, worst site again LEUVEN_1
-     ([headline](reports/tables/conformal_headline_droprois.md)).
+   (abstention 0.86). Its coverage comes from abstaining, not from correcting the shift.
+8. **Robustness.** The MLP, α = 0.2, and ROI-level instead of subject-level exclusion
+   (979 subjects, 19 sites; split CP 0.895, worst site again LEUVEN_1) leave the
+   conclusions unchanged.
 
-### Label-free shift detection (phase 6, exploratory)
+#### Label-free shift detection (exploratory)
 
-Can a coverage loss at a new site be seen **before** any of its labels arrive? Eight
-signals are computed from the site's features and predictions only: domain-classifier
-AUC, KS tests on P(ASD) and on confidence, confidence shift, abstention rate and its
-shift, mean P(ASD) shift, and EM prevalence shift. A unit test checks that permuting the
-site's labels leaves every signal unchanged. Across the 18 sites, each signal is related
-to the real coverage loss ([correlations](reports/tables/detection_correlations.md)).
-The statistics are Spearman ρ, a site-bootstrap CI, a permutation p-value, BH, the range
-of ρ over leave-one-site-out, and a partial ρ adjusted for site size.
+Eight signals are computed from the new site's features and predictions only:
+domain-classifier AUC, KS tests on P(ASD) and on confidence, confidence shift,
+abstention rate and its shift, mean P(ASD) shift, and EM prevalence shift. A unit test
+checks that permuting the site's labels leaves every signal unchanged. Across 18 sites,
+each signal is related to the real coverage loss with Spearman ρ, a site-bootstrap CI, a
+permutation p-value, BH, the range over leave-one-site-out and a size-adjusted partial ρ
+([correlations](reports/tables/detection_correlations.md)).
 
-![Label-free signals vs coverage drop](reports/figures/fig7_detection.png)
-
-1. **No signal predicts how much marginal coverage drops (negative result).** All eight
-   correlations are weak (ρ −0.22 to 0.40, every q ≥ 0.23), with the MLP and after
-   ComBat too.
-2. **How strongly a site is shifted is not the issue.** Every site is shifted (domain
-   AUC 0.78–1.00), but domain AUC is unrelated to the coverage drop (ρ = 0.09). What
-   matters is whether the shift moves subjects across the decision boundary.
-3. **Abstention is not an alarm.** Sites where coverage drops abstain, if anything,
-   *less* (ρ = −0.22), because a model that is confidently wrong abstains less.
-4. **The direction is detectable.** The signed shift in mean P(ASD) between calibration
-   data and the new site predicts *which class* loses coverage: ρ = 0.83 [0.55, 0.95],
-   q = 0.001. The result is stable when adjusted for site size (0.82), across
-   leave-one-site-out (0.79 to 0.88), and with the MLP (0.86). The EM prevalence shift
-   carries the same information (ρ = 0.82)
-   ([Figure 7b](reports/figures/fig7b_detection_class_gap.png)). *Caveat:* the mean
-   P(ASD) shift was added after phase 5 had shown the labelled version of this relation
-   on the same sites, so this confirms the finding on the same data; it is not an
-   independent test.
+1. **No signal predicts how much marginal coverage drops (negative result):** ρ from
+   −0.22 to 0.40, every q ≥ 0.23, also with the MLP and after ComBat.
+2. **How strongly a site is shifted is not the issue.** Every site is shifted (domain AUC
+   0.78–1.00), but domain AUC is unrelated to the coverage drop (ρ = 0.09).
+3. **Abstention is not an alarm.** Sites where coverage drops abstain, if anything, *less*
+   (ρ = −0.22): a model that is confidently wrong abstains less.
+4. **The direction is detectable.** The signed mean P(ASD) shift predicts *which class*
+   loses coverage: ρ = 0.83 [0.55, 0.95], q = 0.001; size-adjusted 0.82; 0.79 to 0.88
+   across leave-one-site-out; 0.86 with the MLP. The EM prevalence shift carries the same
+   information (ρ = 0.82). *Caveat:* this signal was added after the labelled version of
+   the relation had been seen on the same sites, so it is a confirmation on the same
+   data, not an independent test.
 5. **Worst-class drop: not claimed.** KS on P(ASD) correlates with the worst-class drop
-   (ρ = 0.67, q = 0.019). It does not survive adjustment for site size (ρ = 0.53,
-   q = 0.14).
+   (ρ = 0.67, q = 0.019) but not after adjustment for site size (ρ = 0.53, q = 0.14).
 
-**Practical reading.** At an unlabelled new site, the sign of the mean P(ASD) shift tells
-which diagnosis the conformal sets will under-cover; that is where a few labels
-(Mondrian) or class-specific thresholds should go. It does not tell whether the site as
-a whole will fall below target.
+</details>
 
-> These are coverage properties of a weak classifier (AUC 0.73), with more than half of
-> subjects receiving both labels. **Nothing here supports clinical use.**
+## Methods in brief
+
+- **Data.** ABIDE I, Preprocessed Connectomes Project (C-PAC, band-pass filtered, no
+  global signal regression), CC200 atlas; per-subject Pearson correlations, Fisher z,
+  upper triangle. Subjects with failed rater QC or constant ROIs are excluded; sites with fewer
+  than 10 subjects per class after QC are dropped.
+- **Models.** L2 logistic regression (primary), tuned by nested cross-validation on the
+  training sites only, and a small fixed-architecture MLP with early stopping; both are
+  temperature-scaled on half of the calibration split.
+- **Conformal prediction.** LAC score (primary) and randomized APS; split,
+  class-conditional, Mondrian with k ∈ {0, 5, 10, 20} labelled target subjects,
+  covariate-shift weighted (domain-classifier likelihood ratios, plain and clipped),
+  label-shift weighted (EM prior and oracle prior), and each of these after ComBat.
+- **Statistics.** Exact binomial tests with Clopper–Pearson intervals and BH correction
+  per site and class; paired site bootstrap for method differences (primary) and a
+  two-stage site-then-subject bootstrap (sensitivity); beta-binomial empirical Bayes for
+  the between-site spread.
+- **Leakage controls.** Unit tests check that the deployment site never enters training,
+  calibration or tuning, that ComBat and the label-free signals do not change when the
+  site's labels are permuted, and that every split is identical across methods.
+
+Full details: [docs/METHODS.md](docs/METHODS.md) · all tables and provenance:
+[docs/RESULTS.md](docs/RESULTS.md) · [model card](docs/MODEL_CARD.md) ·
+[data card](docs/DATA_CARD.md).
 
 ## Limitations
 
-See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short:
-- ASD classification from ABIDE connectomes is modest, here as in the literature.
-- Sites differ in age, protocol and diagnostic practice, not only in scanner.
-- ComBat is transductive and makes distributional assumptions.
-- Per-site power is low.
-- The label-free detection part is exploratory and rests on 18 sites.
+See [docs/LIMITATIONS.md](docs/LIMITATIONS.md) for all 13 points. The most important:
 
-**This is research software. It is not a diagnostic tool.**
+- **Weak classifier.** ASD classification from ABIDE connectomes is modest (AUC 0.73),
+  here as in the literature, so abstention is high.
+- **Sites differ in more than the scanner:** age, protocol and diagnostic practice
+  differ too, so "site shift" mixes several kinds of shift.
+- **Low per-site power.** 25–172 subjects per site; single-site statements rest on
+  pooled statistics across sites.
+- **ComBat is transductive:** it needs the new site's unlabelled data as a batch.
+- **Detection is exploratory:** 18 sites, and the positive result has not been
+  replicated on an independent cohort.
+- **This is research software. It is not a diagnostic tool.**
 
-## Reproduce
+## Reproduce in 3 commands
 
 ```bash
 pip install -e ".[torch,harmonize]"
@@ -243,18 +282,22 @@ shiftguard all --config configs/experiment/loso.yaml --sensitivity
 shiftguard report
 ```
 
-`all` downloads ABIDE (about 0.4 GB) and runs every analysis, then writes
-`reports/final_runs.yaml`. `report` rebuilds every table and figure from those runs, then
-writes `docs/RESULTS.md` and the key-results table above. The full pipeline takes several
-hours on a laptop CPU (see the Kaggle notebook for per-step times). On a CPU-only
-machine, install PyTorch from the CPU index **before** the first command, so pip does not
-fetch the much larger CUDA build:
+`all` downloads ABIDE (about 0.4 GB, never committed), runs every analysis and writes
+`reports/final_runs.yaml`; `report` rebuilds every table and figure from those runs and
+writes `docs/RESULTS.md` and the table above. The full pipeline takes several hours on a
+laptop CPU (per-step times are in the Kaggle notebook). On a CPU-only machine, install
+PyTorch from the CPU index first, so pip does not fetch the much larger CUDA build:
 
 ```bash
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
-Development (lint, tests, pre-commit; CI never downloads ABIDE):
+**Kaggle.** [`notebooks/kaggle_shiftguard.ipynb`](notebooks/kaggle_shiftguard.ipynb) runs
+the same pipeline on a free Kaggle CPU session (Internet ON). To open it: Kaggle →
+*Create → New Notebook → File → Import Notebook → GitHub*, then paste
+`amarilokmane1-code/shiftguard` and pick `notebooks/kaggle_shiftguard.ipynb`.
+
+**Development** (lint, tests, pre-commit; CI never downloads ABIDE):
 
 ```bash
 pip install -e ".[torch,dev,harmonize]"
@@ -262,33 +305,57 @@ python tasks.py lint
 python tasks.py test
 ```
 
-Kaggle notebook: [`notebooks/kaggle_shiftguard.ipynb`](notebooks/kaggle_shiftguard.ipynb)
-(Kaggle link: *to be added after publication*).
-
-## Repository layout
+## Project structure
 
 ```
-src/shiftguard/   data, features, models, conformal, shift, evaluation, viz, cli.py
-configs/          YAML configs (data, model, conformal, experiment)
-tests/            unit, leakage and synthetic end-to-end tests
-notebooks/        Kaggle notebook
-reports/          generated tables and figures (run folders are not tracked)
-docs/             methods, results, limitations, model card, data card
+shiftguard/
+├── src/shiftguard/
+│   ├── cli.py           # `shiftguard` command: download, features, run, conformal, detect, report, all
+│   ├── data/            # ABIDE download, phenotypes, QC, time series, synthetic data
+│   ├── features/        # connectomes, ComBat harmonisation
+│   ├── models/          # logistic regression, MLP, temperature scaling
+│   ├── conformal/       # scores, quantiles, split, Mondrian, weighted, label-shift
+│   ├── shift/           # domain classifier, likelihood-ratio weights, EM prior
+│   ├── evaluation/      # LOSO runner, conformal summary, statistics, detection, report
+│   ├── viz/             # one colour-blind-safe style for every figure
+│   └── utils/           # config, seeding, provenance, logging, tables
+├── configs/             # YAML: data, model, conformal, experiment
+├── tests/               # unit, leakage, statistics and end-to-end tests
+├── notebooks/           # Kaggle notebook and its generator
+├── reports/
+│   ├── figures/         # generated PNG + PDF figures (tracked)
+│   ├── tables/          # generated CSV + Markdown tables (tracked)
+│   └── final_runs.yaml  # which run folders the results come from
+└── docs/                # METHODS, RESULTS, LIMITATIONS, MODEL_CARD, DATA_CARD
 ```
 
 ## Data
 
 ABIDE I Preprocessed (Preprocessed Connectomes Project). The data are downloaded by the
-code, **never committed**, and subject to their own terms of use. See
+code, **never committed**, and subject to their own terms of use; see
 [docs/DATA_CARD.md](docs/DATA_CARD.md).
 
 ## Citation
 
-See [CITATION.cff](CITATION.cff).
+If you use ShiftGuard, please cite it via [CITATION.cff](CITATION.cff) (GitHub's
+*Cite this repository* button), or:
+
+```bibtex
+@software{amari_shiftguard,
+  author  = {Amari, Lokmane},
+  title   = {ShiftGuard: Does conformal abstention survive site shift?
+             A multi-site autism neuroimaging benchmark},
+  version = {0.1.0},
+  license = {MIT},
+  url     = {https://github.com/amarilokmane1-code/shiftguard}
+}
+```
 
 ## Author
 
-**Lokmane Amari**, ORCID [0009-0006-2358-5912](https://orcid.org/0009-0006-2358-5912).
+**Lokmane Amari**
+· ORCID [0009-0006-2358-5912](https://orcid.org/0009-0006-2358-5912)
+· [LinkedIn](https://www.linkedin.com/in/amari-lokmane-4098913a9)
 
 Related work:
 

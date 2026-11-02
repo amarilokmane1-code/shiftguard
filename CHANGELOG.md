@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- README for a general audience: tagline, badges, Figure 3 at the top, plain-English key
+  findings, "why this matters", a Mermaid pipeline diagram, a captioned gallery of every
+  final figure, methods in brief, limitations, project tree, BibTeX and author links.
+  The detailed per-phase findings are kept in a collapsible section.
+- Figures: no overlapping labels or titles in Figures 4, 5, 7b and S1
+  (`viz.style.label_points`, `viz.style.spread_positions`, with tests).
+
 - Phase 9: reviewer pass.
   - Clean-clone check of commit fde85f5 (fresh venv, CPU PyTorch,
     `.[dev,harmonize]`): install 7.6 min; lint clean; 231 tests passed (96% coverage)
